@@ -1,0 +1,5 @@
+{
+  "name": "PR Task Manager",
+  "description": "A comprehensive task management system for Corporate Communications teams, designed to streamline task requests from various departments. It features a dashboard, task management, assignee management, and an AI-powered chatbot assistant.",
+  "requestFramePermissions": []
+}

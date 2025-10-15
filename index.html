@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ระบบจัดการงาน ส่วนงานสื่อสารองค์กร</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@100..700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Anuphan', 'sans-serif'],
+            },
+            colors: {
+              'brand-primary': '#2563eb',
+              'brand-secondary': '#f97316',
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: 'Anuphan', sans-serif;
+      }
+      .icon-interactive {
+        position: relative;
+        overflow: hidden;
+        /* Ensures the container fits the icon */
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .icon-interactive > svg, .icon-interactive > * > svg {
+        transition: transform 0.2s ease-in-out;
+        position: relative;
+        z-index: 1; /* Keep icon above the shine effect */
+      }
+      .icon-interactive:hover > svg, .icon-interactive:hover > * > svg {
+        transform: scale(1.15);
+      }
+      .icon-interactive::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        transform: translateX(-100%);
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+        pointer-events: none;
+      }
+      .dark .icon-interactive::after {
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      }
+      .icon-interactive:hover::after {
+          transform: translateX(100%);
+          transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+      }
+
+      /* --- New Shimmer Card Style --- */
+      .shimmer-card {
+        position: relative;
+        overflow: hidden;
+      }
+      .shimmer-card::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 1rem; /* matches rounded-2xl */
+        background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.3), transparent 40%);
+        z-index: 0;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+      .shimmer-card:hover::before {
+        opacity: 1;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.24.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
+    "recharts": "https://aistudiocdn.com/recharts@^3.2.1",
+    "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-50 dark:bg-gray-900">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
