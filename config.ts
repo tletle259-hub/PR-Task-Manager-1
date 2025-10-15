@@ -24,4 +24,4 @@ export const DEFAULT_ADMIN_PASSWORD = 'admin@pr1234';
  * and return a JSON response like:
  * { "fileUrl": "..." }
  */
-export const GOOGLE_DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbwJRfSAzqFGowC4ZVwIxrYi8BXqgHL2s_Jzmmnlsb0uJN5hszPtakUfVuWdJQi2uKlR/exec';
+export const GOOGLE_DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbyHoWqXJIxJoDTZWulGiR2xKVWT1XcAXDpNh-J_p2UG4OQN1AmP-Ai7MXhNRatX5yip/exec';
