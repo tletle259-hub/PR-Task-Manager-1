@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { FiMessageCircle, FiX, FiSend, FiUser, FiMail, FiMessageSquare, FiPhone } from 'react-icons/fi';
 import { ContactMessage } from '../types';
-import { CONTACT_MESSAGES_STORAGE_KEY } from '../constants';
+import { addContactMessage } from '../services/contactService';
 
 
 // A reusable input field component to maintain style consistency
@@ -36,14 +36,8 @@ export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitte
         isRead: false,
     };
     
-    try {
-        const storedMessagesRaw = localStorage.getItem(CONTACT_MESSAGES_STORAGE_KEY);
-        const storedMessages: ContactMessage[] = storedMessagesRaw ? JSON.parse(storedMessagesRaw) : [];
-        const updatedMessages = [...storedMessages, newMessage];
-        localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(updatedMessages));
-    } catch (error) {
-        console.error("Failed to save message to localStorage:", error);
-    }
+    // Use the new service to add the message
+    addContactMessage(newMessage);
     
     setIsSubmitting(false);
     setSubmitSuccess(true);

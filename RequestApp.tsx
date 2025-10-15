@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiFilePlus, FiList, FiMenu, FiMessageCircle, FiSun, FiMoon } from 'react-icons/fi';
 import { Task } from './types';
-import { MOCK_TASKS } from './constants';
+import { getTasks, addTask } from './services/taskService';
 import RequestForm from './components/RequestForm';
 import MyRequests from './components/MyRequests';
 import { default as ContactWidget, ContactForm } from './components/ChatBot';
@@ -117,32 +117,14 @@ const RequestApp: React.FC<RequestAppProps> = ({ onBackToHome, theme, toggleThem
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   useEffect(() => {
-    let storedTasks;
-    try {
-        const rawTasks = localStorage.getItem('pr-tasks');
-        storedTasks = rawTasks ? JSON.parse(rawTasks) : null;
-    } catch (e) {
-        console.error("Error parsing tasks from localStorage:", e);
-        storedTasks = null;
-        localStorage.removeItem('pr-tasks');
-    }
-    
-    if (storedTasks && Array.isArray(storedTasks)) {
-      setTasks(storedTasks);
-    } else {
-      localStorage.setItem('pr-tasks', JSON.stringify(MOCK_TASKS));
-      setTasks(MOCK_TASKS);
-    }
+    // Load tasks using the service
+    setTasks(getTasks());
   }, []);
 
-  const saveTasks = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
-    localStorage.setItem('pr-tasks', JSON.stringify(updatedTasks));
-  };
-  
   const handleTaskAdded = (newTask: Task) => {
-    const updatedTasks = [...tasks, newTask];
-    saveTasks(updatedTasks);
+    // Add task using the service and update state
+    const updatedTasks = addTask(newTask);
+    setTasks(updatedTasks);
     setView('list');
   };
 

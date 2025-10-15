@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiPlus, FiX, FiTrash2, FiClock } from 'react-icons/fi';
 import { Task, CalendarEvent } from '../types';
-import { TASK_TYPE_COLORS, MOCK_HOLIDAYS, CALENDAR_EVENTS_STORAGE_KEY } from '../constants';
+import { TASK_TYPE_COLORS } from '../constants';
+import { getCalendarEvents, saveCalendarEvents } from '../services/calendarService';
 
 type ViewMode = 'month' | 'week' | 'day';
 
@@ -104,46 +105,29 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
   const [selectedEvent, setSelectedEvent] = useState<Partial<CalendarEvent> | null>(null);
   
   useEffect(() => {
-      try {
-          const storedEvents = localStorage.getItem(CALENDAR_EVENTS_STORAGE_KEY);
-          if (storedEvents) {
-              setCustomEvents(JSON.parse(storedEvents));
-          } else {
-              const initialEvents = MOCK_HOLIDAYS.map(h => ({
-                  id: `holiday-${h.date}`,
-                  title: h.name,
-                  start: new Date(h.date).toISOString(),
-                  end: new Date(h.date).toISOString(),
-                  allDay: true,
-                  color: '#10b981'
-              }));
-              setCustomEvents(initialEvents);
-          }
-      } catch (error) {
-          console.error("Failed to load or parse calendar events:", error);
-      }
+    setCustomEvents(getCalendarEvents());
   }, []);
 
-  const saveCustomEvents = (events: CalendarEvent[]) => {
-      setCustomEvents(events);
-      localStorage.setItem(CALENDAR_EVENTS_STORAGE_KEY, JSON.stringify(events));
-  };
-  
   const handleSaveEvent = (event: CalendarEvent) => {
     const index = customEvents.findIndex(e => e.id === event.id);
+    let updatedEvents;
     if(index > -1) {
-        saveCustomEvents(customEvents.map(e => e.id === event.id ? event : e));
+      updatedEvents = customEvents.map(e => e.id === event.id ? event : e);
     } else {
-        saveCustomEvents([...customEvents, event]);
+      updatedEvents = [...customEvents, event];
     }
+    setCustomEvents(updatedEvents);
+    saveCalendarEvents(updatedEvents);
     setIsModalOpen(false);
     setSelectedEvent(null);
   }
 
   const handleDeleteEvent = (eventId: string) => {
-      saveCustomEvents(customEvents.filter(e => e.id !== eventId));
-      setIsModalOpen(false);
-      setSelectedEvent(null);
+    const updatedEvents = customEvents.filter(e => e.id !== eventId);
+    setCustomEvents(updatedEvents);
+    saveCalendarEvents(updatedEvents);
+    setIsModalOpen(false);
+    setSelectedEvent(null);
   }
 
   const allItems: CalendarItem[] = useMemo(() => [

@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiFilePlus, FiCalendar, FiSettings, FiChevronDown, FiInbox } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, Notification, ContactMessage } from './types';
-import { MOCK_TASKS, MOCK_TEAM_MEMBERS, MOCK_NOTIFICATIONS, CONTACT_MESSAGES_STORAGE_KEY } from './constants';
+import { saveTasks } from './services/taskService';
+import { getTasks, updateTask, deleteTask } from './services/taskService';
+import { getTeamMembers, saveTeamMembers } from './services/teamService';
+import { getNotifications, saveNotifications } from './services/notificationService';
+import { getContactMessages, saveContactMessages } from './services/contactService';
 import Header from './components/Header';
 import OverviewDashboard from './components/OverviewDashboard';
 import TaskDashboard from './components/TaskDashboard';
@@ -178,70 +182,37 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const safeJsonParse = <T,>(key: string, fallback: T): T => {
-        const item = localStorage.getItem(key);
-        if (!item) return fallback;
-        try {
-            const parsed = JSON.parse(item);
-            // FIX: Cast `parsed` to `T` as we trust the data from localStorage to have the correct shape.
-            return Array.isArray(parsed) ? (parsed as T) : fallback;
-        } catch (e) {
-            console.error(`Error parsing JSON from localStorage key "${key}":`, e);
-            localStorage.removeItem(key); // Clear corrupted data
-            return fallback;
-        }
-    };
-    
-    const members = safeJsonParse('pr-team-members', MOCK_TEAM_MEMBERS);
-    if (localStorage.getItem('pr-team-members') === null) {
-        localStorage.setItem('pr-team-members', JSON.stringify(MOCK_TEAM_MEMBERS));
-    }
+    // Load all data from services
+    const members = getTeamMembers();
     setTeamMembers(members);
-    if(members.length > 0) {
+    if (members.length > 0) {
       setCurrentUser(members[0]);
     }
-    
-    const loadedTasks = safeJsonParse('pr-tasks', MOCK_TASKS);
-    if (localStorage.getItem('pr-tasks') === null) {
-        localStorage.setItem('pr-tasks', JSON.stringify(MOCK_TASKS));
-    }
-    setTasks(loadedTasks);
-
-    const loadedNotifications = safeJsonParse('pr-notifications', MOCK_NOTIFICATIONS);
-    if (localStorage.getItem('pr-notifications') === null) {
-        localStorage.setItem('pr-notifications', JSON.stringify(MOCK_NOTIFICATIONS));
-    }
-    setNotifications(loadedNotifications);
-
-    const messages = safeJsonParse(CONTACT_MESSAGES_STORAGE_KEY, []);
-    setContactMessages(messages);
+    setTasks(getTasks());
+    setNotifications(getNotifications());
+    setContactMessages(getContactMessages());
   }, []);
   
-  const updateTasks = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
-    localStorage.setItem('pr-tasks', JSON.stringify(updatedTasks));
-  };
-  
   const handleUpdateTask = (updatedTask: Task) => {
-    const updatedTasks = tasks.map(t => t.id === updatedTask.id ? updatedTask : t);
-    updateTasks(updatedTasks);
+    const updatedTasks = updateTask(updatedTask);
+    setTasks(updatedTasks);
     setSelectedTask(null);
   };
 
   const updateTeamMembers = (updatedMembers: TeamMember[]) => {
     setTeamMembers(updatedMembers);
-    localStorage.setItem('pr-team-members', JSON.stringify(updatedMembers));
+    saveTeamMembers(updatedMembers);
   };
 
   const updateNotifications = (updated: Notification[]) => {
     setNotifications(updated);
-    localStorage.setItem('pr-notifications', JSON.stringify(updated));
+    saveNotifications(updated);
   };
   
   const updateContactMessages = (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => {
     setContactMessages(prevMessages => {
         const newMessages = updater(prevMessages);
-        localStorage.setItem(CONTACT_MESSAGES_STORAGE_KEY, JSON.stringify(newMessages));
+        saveContactMessages(newMessages);
         return newMessages;
     });
   };
@@ -292,7 +263,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
-                  updateTasks={updateTasks} 
+                  updateTasks={(updated) => { setTasks(updated); saveTasks(updated); }}
                   filter="all" 
                   initialFilters={activeFilters}
                   clearInitialFilters={() => setActiveFilters({})}
@@ -307,7 +278,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
-                  updateTasks={updateTasks} 
+                  updateTasks={(updated) => { setTasks(updated); saveTasks(updated); }}
                   filter="starred" 
                   initialFilters={{}}
                   clearInitialFilters={() => {}}
