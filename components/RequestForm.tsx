@@ -2,11 +2,25 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiPaperclip, FiX, FiCalendar } from 'react-icons/fi';
 import { Task, TaskType, TaskStatus, Attachment } from '../types';
+import { GOOGLE_DRIVE_UPLOAD_URL } from '../config';
 
 interface RequestFormProps {
   onTaskAdded: (task: Task) => void;
   tasks: Task[];
 }
+
+// Helper function to convert File to Base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = error => reject(error);
+  });
+};
 
 const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks }) => {
   const [formData, setFormData] = useState({
@@ -29,6 +43,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
 
   useEffect(() => {
@@ -134,7 +149,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks }) => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const formErrors = validate();
     if (Object.keys(formErrors).length > 0) {
@@ -144,25 +159,67 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks }) => {
         return;
     }
     
-    const existingIds = tasks.map(t => parseInt(t.id.replace('PR', ''), 10)).filter(id => !isNaN(id));
-    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-    const nextId = `PR${(maxId + 1).toString().padStart(3, '0')}`;
-    
-    const fileData: Attachment[] = attachments.map(f => ({ name: f.name, size: f.size, type: f.type }));
-    
-    const newTask: Task = {
-      ...formData,
-      id: nextId,
-      timestamp: new Date().toISOString(), // Use the exact submission time
-      attachments: fileData,
-      assigneeId: null,
-      status: TaskStatus.NOT_STARTED,
-      isStarred: false,
-      notes: [],
-    };
-    
-    localStorage.setItem('requesterEmail', formData.requesterEmail);
-    onTaskAdded(newTask);
+    setIsSubmitting(true);
+
+    try {
+        if (GOOGLE_DRIVE_UPLOAD_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            console.warn("Google Drive upload URL is not configured. Skipping image uploads.");
+        }
+
+        const attachmentPromises = attachments.map(async (file): Promise<Attachment> => {
+            if (file.type.startsWith('image/') && GOOGLE_DRIVE_UPLOAD_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+                try {
+                    const base64Data = await fileToBase64(file);
+                    const response = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            fileName: file.name,
+                            mimeType: file.type,
+                            data: base64Data,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Upload failed: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    if (result.fileUrl) {
+                        return { name: file.name, size: file.size, type: file.type, url: result.fileUrl };
+                    }
+                } catch (error) {
+                    console.error('Error uploading file to Google Drive:', file.name, error);
+                }
+            }
+            // For non-images or if upload fails/is not configured
+            return { name: file.name, size: file.size, type: file.type };
+        });
+        
+        const fileData = await Promise.all(attachmentPromises);
+        
+        const existingIds = tasks.map(t => parseInt(t.id.replace('PR', ''), 10)).filter(id => !isNaN(id));
+        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+        const nextId = `PR${(maxId + 1).toString().padStart(3, '0')}`;
+        
+        const newTask: Task = {
+          ...formData,
+          id: nextId,
+          timestamp: new Date().toISOString(),
+          attachments: fileData,
+          assigneeId: null,
+          status: TaskStatus.NOT_STARTED,
+          isStarred: false,
+          notes: [],
+        };
+        
+        localStorage.setItem('requesterEmail', formData.requesterEmail);
+        onTaskAdded(newTask);
+    } catch (error) {
+        console.error("Error during form submission:", error);
+        alert('เกิดข้อผิดพลาดในการส่งฟอร์ม กรุณาลองใหม่อีกครั้ง');
+    } finally {
+        setIsSubmitting(false);
+    }
   };
   
   return (
@@ -267,9 +324,10 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks }) => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"
-            className="icon-interactive bg-brand-secondary text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-emerald-700 transition-colors"
+            disabled={isSubmitting}
+            className="icon-interactive bg-brand-secondary text-white font-bold py-3 px-8 rounded-lg shadow-lg hover:bg-emerald-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            ส่งคำร้องขอ
+            {isSubmitting ? 'กำลังส่งและอัปโหลด...' : 'ส่งคำร้องขอ'}
           </motion.button>
         </div>
       </form>

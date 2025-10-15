@@ -151,7 +151,15 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                             {task.attachments.map((file, index) => (
                                 <li key={index} className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
                                     <FiPaperclip size={14}/>
-                                    <a href="#" onClick={(e)=>e.preventDefault()} className="hover:underline truncate">{file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</a>
+                                    {file.url ? (
+                                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="hover:underline truncate" title={`เปิด ${file.name} ในแท็บใหม่`}>
+                                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                        </a>
+                                    ) : (
+                                        <span className="truncate text-gray-600 dark:text-gray-400" title="ไม่สามารถดูไฟล์นี้ได้โดยตรง">
+                                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                        </span>
+                                    )}
                                 </li>
                             ))}
                         </ul>
