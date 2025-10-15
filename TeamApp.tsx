@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiFilePlus, FiCalendar, FiSettings, FiChevronDown, FiInbox } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, Notification, ContactMessage } from './types';
-import { saveTasks } from './services/taskService';
-import { getTasks, updateTask, deleteTask } from './services/taskService';
-import { getTeamMembers, saveTeamMembers } from './services/teamService';
-import { getNotifications, saveNotifications } from './services/notificationService';
-import { getContactMessages, saveContactMessages } from './services/contactService';
+import { onTasksUpdate, updateTask } from './services/taskService';
+import { onTeamMembersUpdate, saveTeamMembers } from './services/teamService';
+import { onNotificationsUpdate, saveNotifications } from './services/notificationService';
+import { onContactMessagesUpdate, saveContactMessages } from './services/contactService';
+import { seedInitialData } from './services/seedService';
+
 import Header from './components/Header';
 import OverviewDashboard from './components/OverviewDashboard';
 import TaskDashboard from './components/TaskDashboard';
@@ -180,39 +181,52 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilters, setActiveFilters] = useState<{[key: string]: string}>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load all data from services
-    const members = getTeamMembers();
-    setTeamMembers(members);
-    if (members.length > 0) {
-      setCurrentUser(members[0]);
-    }
-    setTasks(getTasks());
-    setNotifications(getNotifications());
-    setContactMessages(getContactMessages());
-  }, []);
+    // Seed initial data if collections are empty
+    seedInitialData().then(() => {
+        // Set up real-time listeners
+        const unsubTasks = onTasksUpdate(setTasks);
+        const unsubMembers = onTeamMembersUpdate((members) => {
+            setTeamMembers(members);
+            if (!currentUser && members.length > 0) {
+                setCurrentUser(members[0]);
+            }
+        });
+        const unsubNotifications = onNotificationsUpdate(setNotifications);
+        const unsubMessages = onContactMessagesUpdate(setContactMessages);
+        
+        setIsLoading(false);
+
+        // Cleanup subscriptions on unmount
+        return () => {
+            unsubTasks();
+            unsubMembers();
+            unsubNotifications();
+            unsubMessages();
+        };
+    });
+  }, [currentUser]);
   
-  const handleUpdateTask = (updatedTask: Task) => {
-    const updatedTasks = updateTask(updatedTask);
-    setTasks(updatedTasks);
+  const handleUpdateTask = async (updatedTask: Task) => {
+    await updateTask(updatedTask);
     setSelectedTask(null);
   };
 
-  const updateTeamMembers = (updatedMembers: TeamMember[]) => {
-    setTeamMembers(updatedMembers);
-    saveTeamMembers(updatedMembers);
+  const updateTeamMembers = async (updatedMembers: TeamMember[]) => {
+    await saveTeamMembers(updatedMembers);
   };
 
-  const updateNotifications = (updated: Notification[]) => {
-    setNotifications(updated);
-    saveNotifications(updated);
+  const updateNotifications = async (updated: Notification[]) => {
+    await saveNotifications(updated);
   };
   
-  const updateContactMessages = (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => {
+  const updateContactMessages = async (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => {
+    // This function needs to get current state to apply updater
     setContactMessages(prevMessages => {
         const newMessages = updater(prevMessages);
-        saveContactMessages(newMessages);
+        saveContactMessages(newMessages); // async save
         return newMessages;
     });
   };
@@ -221,20 +235,23 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
     const taskToOpen = tasks.find(t => t.id === taskId);
     if (taskToOpen) {
       setSelectedTask(taskToOpen);
-      updateNotifications(notifications.map(n => n.taskId === taskId ? { ...n, isRead: true } : n));
+      const updatedNotifications = notifications.map(n => n.taskId === taskId ? { ...n, isRead: true } : n);
+      saveNotifications(updatedNotifications); // async save
     }
   };
 
   const handleDeleteNotification = (notificationId: string) => {
-    updateNotifications(notifications.filter(n => n.id !== notificationId));
+    const updatedNotifications = notifications.filter(n => n.id !== notificationId);
+    saveNotifications(updatedNotifications); // async save
   };
 
   const handleClearNotifications = () => {
-    updateNotifications([]);
+    saveNotifications([]); // async save
   };
 
   const handleMarkAllAsRead = () => {
-    updateNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    const updatedNotifications = notifications.map(n => ({ ...n, isRead: true }));
+    saveNotifications(updatedNotifications); // async save
   };
 
   const handleSetFilters = (filters: {[key: string]: string}) => {
@@ -247,9 +264,19 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
   };
   
   const unreadMessagesCount = contactMessages.filter(m => !m.isRead).length;
+  
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">กำลังเชื่อมต่อฐานข้อมูล...</p>
+            </div>
+        </div>
+    );
+  }
 
   const renderView = () => {
-    if (!currentUser) return null;
+    if (!currentUser) return <div className="text-center p-8">กำลังโหลดข้อมูลผู้ใช้...</div>;
     
     switch (view) {
       case 'dashboard':
@@ -263,7 +290,6 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
-                  updateTasks={(updated) => { setTasks(updated); saveTasks(updated); }}
                   filter="all" 
                   initialFilters={activeFilters}
                   clearInitialFilters={() => setActiveFilters({})}
@@ -278,7 +304,6 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
-                  updateTasks={(updated) => { setTasks(updated); saveTasks(updated); }}
                   filter="starred" 
                   initialFilters={{}}
                   clearInitialFilters={() => {}}

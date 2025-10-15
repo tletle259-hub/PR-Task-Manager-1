@@ -1,69 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiSave, FiTrash2, FiEdit, FiX } from 'react-icons/fi';
-import { DEFAULT_ADMIN_PASSWORD } from '../config';
-
-const PASSWORDS_STORAGE_KEY = 'pr-admin-passwords';
-
-const getAdminPasswords = (): string[] => {
-    try {
-        const storedPasswords = localStorage.getItem(PASSWORDS_STORAGE_KEY);
-        if (storedPasswords) {
-            const parsed = JSON.parse(storedPasswords);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                 return parsed;
-            }
-        }
-        const defaultPasswords = [DEFAULT_ADMIN_PASSWORD];
-        localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(defaultPasswords));
-        return defaultPasswords;
-    } catch (e) {
-        return [DEFAULT_ADMIN_PASSWORD];
-    }
-};
-
-const saveAdminPasswords = (passwords: string[]) => {
-    localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(passwords));
-};
+import { getAdminPasswords, saveAdminPasswords } from '../services/securityService';
 
 const PasswordManager: React.FC = () => {
     const [passwords, setPasswords] = useState<string[]>([]);
     const [newPassword, setNewPassword] = useState('');
     const [editingState, setEditingState] = useState<{ index: number; value: string } | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        setPasswords(getAdminPasswords());
+        const fetchPasswords = async () => {
+            setIsLoading(true);
+            const fetchedPasswords = await getAdminPasswords();
+            setPasswords(fetchedPasswords);
+            setIsLoading(false);
+        };
+        fetchPasswords();
     }, []);
 
-    const handleAddPassword = () => {
+    const handleAddPassword = async () => {
         if (newPassword.trim() && !passwords.includes(newPassword.trim())) {
             const updatedPasswords = [...passwords, newPassword.trim()];
-            setPasswords(updatedPasswords);
-            saveAdminPasswords(updatedPasswords);
+            await saveAdminPasswords(updatedPasswords);
+            setPasswords(updatedPasswords); // Optimistic update
             setNewPassword('');
         }
     };
 
-    const handleEditPassword = () => {
+    const handleEditPassword = async () => {
         if (editingState && editingState.value.trim()) {
             const updatedPasswords = [...passwords];
             updatedPasswords[editingState.index] = editingState.value.trim();
-            setPasswords(updatedPasswords);
-            saveAdminPasswords(updatedPasswords);
+            await saveAdminPasswords(updatedPasswords);
+            setPasswords(updatedPasswords); // Optimistic update
             setEditingState(null);
         }
     };
 
-    const handleDeletePassword = (indexToDelete: number) => {
+    const handleDeletePassword = async (indexToDelete: number) => {
         if (passwords.length <= 1) {
             alert('ต้องมีรหัสผ่านอย่างน้อย 1 รหัส');
             return;
         }
         if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบรหัสผ่านนี้?')) {
             const updatedPasswords = passwords.filter((_, index) => index !== indexToDelete);
-            setPasswords(updatedPasswords);
-            saveAdminPasswords(updatedPasswords);
+            await saveAdminPasswords(updatedPasswords);
+            setPasswords(updatedPasswords); // Optimistic update
         }
     };
+    
+    if (isLoading) {
+        return <p>กำลังโหลดรหัสผ่าน...</p>;
+    }
 
     return (
         <div className="space-y-4">

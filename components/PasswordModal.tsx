@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiLock, FiX, FiEye, FiEyeOff } from 'react-icons/fi';
-import { DEFAULT_ADMIN_PASSWORD } from '../config';
+import { getAdminPasswords } from '../services/securityService';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -9,42 +9,29 @@ interface PasswordModalProps {
   onSuccess: () => void;
 }
 
-const PASSWORDS_STORAGE_KEY = 'pr-admin-passwords';
-
-const getAdminPasswords = (): string[] => {
-    try {
-        const storedPasswords = localStorage.getItem(PASSWORDS_STORAGE_KEY);
-        if (storedPasswords) {
-            const parsed = JSON.parse(storedPasswords);
-            // Ensure it's a non-empty array
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                 return parsed;
-            }
-        }
-        // Initialize with default if not set or empty
-        const defaultPasswords = [DEFAULT_ADMIN_PASSWORD];
-        localStorage.setItem(PASSWORDS_STORAGE_KEY, JSON.stringify(defaultPasswords));
-        return defaultPasswords;
-    } catch (e) {
-        console.error("Failed to parse admin passwords from localStorage", e);
-        return [DEFAULT_ADMIN_PASSWORD]; // Fallback
-    }
-}
-
 const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validPasswords = getAdminPasswords();
-    if (validPasswords.includes(password)) {
-      setError('');
-      setPassword('');
-      onSuccess();
-    } else {
-      setError('รหัสผ่านไม่ถูกต้อง!');
+    setIsVerifying(true);
+    try {
+      const validPasswords = await getAdminPasswords();
+      if (validPasswords.includes(password)) {
+        setError('');
+        setPassword('');
+        onSuccess();
+      } else {
+        setError('รหัสผ่านไม่ถูกต้อง!');
+      }
+    } catch (err) {
+        console.error("Error verifying password:", err);
+        setError('เกิดข้อผิดพลาดในการตรวจสอบรหัสผ่าน');
+    } finally {
+        setIsVerifying(false);
     }
   };
 
@@ -126,9 +113,10 @@ const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, onClose, onSucces
               </AnimatePresence>
               <button
                 type="submit"
-                className="mt-4 w-full bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={isVerifying}
+                className="mt-4 w-full bg-brand-primary text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
               >
-                เข้าสู่ระบบ
+                {isVerifying ? 'กำลังตรวจสอบ...' : 'เข้าสู่ระบบ'}
               </button>
             </form>
           </motion.div>

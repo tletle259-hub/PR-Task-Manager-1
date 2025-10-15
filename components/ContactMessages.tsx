@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContactMessage } from '../types';
 import { FiInbox, FiTrash2, FiChevronDown, FiMail, FiUser, FiClock, FiPhone } from 'react-icons/fi';
+import { saveContactMessages } from '../services/contactService';
 
 interface ContactMessagesProps {
   messages: ContactMessage[];
-  updateMessages: (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => void;
+  updateMessages: (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => Promise<void>;
 }
 
 const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, updateMessages }) => {

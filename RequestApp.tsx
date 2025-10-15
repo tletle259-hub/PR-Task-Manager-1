@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUsers, FiFilePlus, FiList, FiMenu, FiMessageCircle, FiSun, FiMoon } from 'react-icons/fi';
 import { Task } from './types';
-import { getTasks, addTask } from './services/taskService';
+import { onTasksUpdate, addTask, seedInitialTasks } from './services/taskService';
 import RequestForm from './components/RequestForm';
 import MyRequests from './components/MyRequests';
 import { default as ContactWidget, ContactForm } from './components/ChatBot';
 import PasswordModal from './components/PasswordModal';
+import { seedInitialData } from './services/seedService';
 
 interface RequestAppProps {
   onBackToHome: () => void;
@@ -115,23 +116,44 @@ const RequestApp: React.FC<RequestAppProps> = ({ onBackToHome, theme, toggleThem
   const [view, setView] = useState<View>('form');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load tasks using the service
-    setTasks(getTasks());
+    seedInitialData().then(() => {
+        const unsubscribe = onTasksUpdate((updatedTasks) => {
+            setTasks(updatedTasks);
+            setIsLoading(false);
+        });
+        
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    });
   }, []);
 
-  const handleTaskAdded = (newTask: Task) => {
-    // Add task using the service and update state
-    const updatedTasks = addTask(newTask);
-    setTasks(updatedTasks);
-    setView('list');
+  const handleTaskAdded = async (newTask: Task) => {
+    try {
+      await addTask(newTask);
+      setView('list');
+    } catch (error) {
+      console.error("Error adding task:", error);
+      // Optionally, show an error message to the user
+    }
   };
 
   const handleAdminAccessSuccess = () => {
       setIsPasswordModalOpen(false);
       onBackToHome();
   };
+
+  if (isLoading) {
+    return (
+        <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+            <div className="text-center">
+                <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">กำลังโหลดข้อมูล...</p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <motion.div

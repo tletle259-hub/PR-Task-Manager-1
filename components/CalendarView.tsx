@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiPlus, FiX, FiTrash2, FiClock } from 'react-icons/fi';
 import { Task, CalendarEvent } from '../types';
 import { TASK_TYPE_COLORS } from '../constants';
-import { getCalendarEvents, saveCalendarEvents } from '../services/calendarService';
+import { onCalendarEventsUpdate, saveCalendarEvents, deleteCalendarEvent, addCalendarEvent } from '../services/calendarService';
 
 type ViewMode = 'month' | 'week' | 'day';
 
@@ -21,7 +21,7 @@ const formatToTime = (date: Date) => date.toLocaleTimeString('th-TH', { hour: '2
 const EventModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  onSave: (event: CalendarEvent) => void;
+  onSave: (event: Omit<CalendarEvent, 'id'> | CalendarEvent) => void;
   onDelete: (eventId: string) => void;
   event: Partial<CalendarEvent> | null;
 }> = ({ isOpen, onClose, onSave, onDelete, event }) => {
@@ -34,15 +34,19 @@ const EventModal: React.FC<{
   if (!isOpen) return null;
 
   const handleSave = () => {
-    const finalEvent: CalendarEvent = {
-      id: formData.id || `event-${Date.now()}`,
+    const finalEventData = {
       title: formData.title || 'กิจกรรมใหม่',
       start: formData.start || new Date().toISOString(),
       end: formData.end || formData.start || new Date().toISOString(),
       allDay: formData.allDay ?? true,
       color: formData.color || EVENT_COLORS[0],
     };
-    onSave(finalEvent);
+
+    if(formData.id) {
+        onSave({ id: formData.id, ...finalEventData });
+    } else {
+        onSave(finalEventData);
+    }
   };
   
   const handleDelete = () => {
@@ -105,27 +109,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
   const [selectedEvent, setSelectedEvent] = useState<Partial<CalendarEvent> | null>(null);
   
   useEffect(() => {
-    setCustomEvents(getCalendarEvents());
+    const unsubscribe = onCalendarEventsUpdate(setCustomEvents);
+    return () => unsubscribe();
   }, []);
 
-  const handleSaveEvent = (event: CalendarEvent) => {
-    const index = customEvents.findIndex(e => e.id === event.id);
-    let updatedEvents;
-    if(index > -1) {
-      updatedEvents = customEvents.map(e => e.id === event.id ? event : e);
+  const handleSaveEvent = async (event: Omit<CalendarEvent, 'id'> | CalendarEvent) => {
+    if ('id' in event) {
+        await saveCalendarEvents([event]); // saveCalendarEvents can handle updates
     } else {
-      updatedEvents = [...customEvents, event];
+        await addCalendarEvent(event);
     }
-    setCustomEvents(updatedEvents);
-    saveCalendarEvents(updatedEvents);
     setIsModalOpen(false);
     setSelectedEvent(null);
   }
 
-  const handleDeleteEvent = (eventId: string) => {
-    const updatedEvents = customEvents.filter(e => e.id !== eventId);
-    setCustomEvents(updatedEvents);
-    saveCalendarEvents(updatedEvents);
+  const handleDeleteEvent = async (eventId: string) => {
+    await deleteCalendarEvent(eventId);
     setIsModalOpen(false);
     setSelectedEvent(null);
   }

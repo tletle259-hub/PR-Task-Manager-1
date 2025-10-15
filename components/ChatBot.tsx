@@ -26,8 +26,7 @@ export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitte
     
     setIsSubmitting(true);
 
-    const newMessage: ContactMessage = {
-        id: `msg-${Date.now()}`,
+    const newMessage: Omit<ContactMessage, 'id'> = {
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -36,17 +35,21 @@ export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitte
         isRead: false,
     };
     
-    // Use the new service to add the message
-    addContactMessage(newMessage);
-    
-    setIsSubmitting(false);
-    setSubmitSuccess(true);
-    
-    setTimeout(() => {
-        setFormData({ name: '', phone: '', email: '', message: '' });
-        setSubmitSuccess(false);
-        onSubmitted?.();
-    }, 3000);
+    try {
+      await addContactMessage(newMessage);
+      setIsSubmitting(false);
+      setSubmitSuccess(true);
+      
+      setTimeout(() => {
+          setFormData({ name: '', phone: '', email: '', message: '' });
+          setSubmitSuccess(false);
+          onSubmitted?.();
+      }, 3000);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setIsSubmitting(false);
+      // Optionally show an error message to the user
+    }
   };
 
   if (submitSuccess) {

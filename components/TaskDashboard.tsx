@@ -1,9 +1,9 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiGrid, FiChevronDown, FiX, FiAlertTriangle } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType } from '../types';
 import { TASK_STATUS_COLORS, TASK_TYPE_COLORS } from '../constants';
+import { updateTask, deleteTask } from '../services/taskService';
 
 // --- NEW CONFIRMATION MODAL COMPONENT ---
 interface ConfirmationModalProps {
@@ -185,7 +185,6 @@ const FilterDropdown: React.FC<{
 interface TaskDashboardProps {
   tasks: Task[];
   teamMembers: TeamMember[];
-  updateTasks: (tasks: Task[]) => void;
   filter: 'all' | 'starred';
   initialFilters: { [key: string]: string };
   clearInitialFilters: () => void;
@@ -278,7 +277,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
 };
 
 
-const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, updateTasks, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
+const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState<{ status: string; type: string; assignee: string }>({ status: 'all', type: 'all', assignee: 'all' });
   const [sort, setSort] = useState('newest');
@@ -327,14 +326,16 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, updat
     });
   }, [tasks, filter, searchTerm, filters, sort]);
 
-  const handleToggleStar = (taskId: string) => {
-    const updatedTasks = tasks.map(t => t.id === taskId ? { ...t, isStarred: !t.isStarred } : t);
-    updateTasks(updatedTasks);
+  const handleToggleStar = async (taskId: string) => {
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (taskToUpdate) {
+        await updateTask({ ...taskToUpdate, isStarred: !taskToUpdate.isStarred });
+    }
   };
   
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!taskToDelete) return;
-    updateTasks(tasks.filter(t => t.id !== taskToDelete.id));
+    await deleteTask(taskToDelete.id);
     setTaskToDelete(null);
   };
 

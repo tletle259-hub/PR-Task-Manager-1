@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUserPlus, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
@@ -7,14 +5,14 @@ import { TeamMember } from '../types';
 
 interface AssigneeManagerProps {
   teamMembers: TeamMember[];
-  updateTeamMembers: (members: TeamMember[]) => void;
+  updateTeamMembers: (members: TeamMember[]) => Promise<void>;
 }
 
 const AssigneeManager: React.FC<AssigneeManagerProps> = ({ teamMembers, updateTeamMembers }) => {
   const [newMember, setNewMember] = useState({ name: '', position: '', avatar: '' });
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
 
-  const handleAddMember = (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMember.name.trim() === '' || newMember.position.trim() === '') return;
     const newMemberData: TeamMember = {
@@ -23,19 +21,19 @@ const AssigneeManager: React.FC<AssigneeManagerProps> = ({ teamMembers, updateTe
       position: newMember.position.trim(),
       avatar: newMember.avatar.trim() || `https://i.pravatar.cc/150?u=TM${Date.now()}`,
     };
-    updateTeamMembers([...teamMembers, newMemberData]);
+    await updateTeamMembers([...teamMembers, newMemberData]);
     setNewMember({ name: '', position: '', avatar: '' });
   };
 
-  const handleUpdateMember = () => {
+  const handleUpdateMember = async () => {
     if (!editingMember || editingMember.name.trim() === '' || editingMember.position.trim() === '') return;
-    updateTeamMembers(teamMembers.map(m => m.id === editingMember.id ? editingMember : m));
+    await updateTeamMembers(teamMembers.map(m => m.id === editingMember.id ? editingMember : m));
     setEditingMember(null);
   };
 
-  const handleDeleteMember = (id: string) => {
+  const handleDeleteMember = async (id: string) => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิกคนนี้?')) {
-      updateTeamMembers(teamMembers.filter(m => m.id !== id));
+      await updateTeamMembers(teamMembers.filter(m => m.id !== id));
     }
   };
 
