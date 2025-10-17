@@ -1,4 +1,4 @@
-import { collection, onSnapshot, addDoc, writeBatch, doc, getDocs, QuerySnapshot, DocumentData } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, writeBatch, doc, getDocs, QuerySnapshot, DocumentData, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { ContactMessage } from '../types';
 
@@ -25,24 +25,38 @@ export const addContactMessage = async (newMessage: Omit<ContactMessage, 'id'>):
     }
 };
 
-export const saveContactMessages = async (messages: ContactMessage[]): Promise<void> => {
-  try {
-    const batch = writeBatch(db);
-    // This function can be used for bulk updates or deletions.
-    // For simple "mark as read" or single deletions, a more specific function would be better.
-    // This example is for clearing all messages.
-    if (messages.length === 0) {
-        // Fix: Use getDocs() function instead of the non-existent .get() method on a collection reference.
-        const allMessagesSnapshot = await getDocs(messagesCollectionRef);
-        allMessagesSnapshot.forEach(doc => batch.delete(doc.ref));
-    } else {
-       messages.forEach(msg => {
-            const docRef = doc(db, MESSAGES_COLLECTION, msg.id);
-            batch.set(docRef, msg);
-       });
+export const updateContactMessage = async (messageId: string, updates: Partial<Omit<ContactMessage, 'id'>>): Promise<void> => {
+    try {
+        const messageDocRef = doc(db, MESSAGES_COLLECTION, messageId);
+        await updateDoc(messageDocRef, updates);
+    } catch (e) {
+        console.error("Error updating contact message: ", e);
+        throw e;
     }
-    await batch.commit();
-  } catch (e) {
-    console.error("Error saving contact messages: ", e);
-  }
+};
+
+export const deleteContactMessage = async (messageId: string): Promise<void> => {
+    try {
+        const messageDocRef = doc(db, MESSAGES_COLLECTION, messageId);
+        await deleteDoc(messageDocRef);
+    } catch(e) {
+        console.error("Error deleting contact message: ", e);
+        throw e;
+    }
+};
+
+export const deleteAllContactMessages = async (): Promise<void> => {
+    try {
+        const existingDocsSnapshot = await getDocs(messagesCollectionRef);
+        if (existingDocsSnapshot.empty) return;
+
+        const batch = writeBatch(db);
+        existingDocsSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error("Error deleting all contact messages: ", e);
+        throw e;
+    }
 };

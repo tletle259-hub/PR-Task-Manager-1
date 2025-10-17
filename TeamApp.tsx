@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut } from 'react-icons/fi';
-import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage } from './types';
+import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage, NotificationType } from './types';
 import { onTasksUpdate, updateTask } from './services/taskService';
 import { onTeamMembersUpdate, addTeamMember, updateTeamMember, deleteTeamMember } from './services/secureIdService';
-import { onNotificationsUpdate, saveNotifications } from './services/notificationService';
-import { onContactMessagesUpdate, saveContactMessages } from './services/contactService';
+import { onNotificationsUpdate, saveNotifications, addNotification } from './services/notificationService';
+import { onContactMessagesUpdate, updateContactMessage, deleteContactMessage, deleteAllContactMessages } from './services/contactService';
 import { onUsersUpdate, updateUser as updateUserService, deleteUser as deleteUserService } from './services/userService';
 import { seedInitialData } from './services/seedService';
 
@@ -236,24 +236,74 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     });
   }, []);
   
+  // Effect for generating "due soon" notifications
+  useEffect(() => {
+    if (isLoading || !tasks.length) return;
+
+    const DUE_SOON_DAYS_THRESHOLD = 3;
+    const now = new Date();
+
+    tasks.forEach(task => {
+      if (task.status === TaskStatus.COMPLETED || task.status === TaskStatus.CANCELLED) {
+        return;
+      }
+
+      const dueDate = new Date(task.dueDate);
+      const timeDiff = dueDate.getTime() - now.getTime();
+      const daysUntilDue = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+      if (daysUntilDue >= 0 && daysUntilDue <= DUE_SOON_DAYS_THRESHOLD) {
+        const hasExistingDueSoonNotif = notifications.some(
+          n => n.taskId === task.id && n.type === NotificationType.DUE_SOON
+        );
+
+        if (!hasExistingDueSoonNotif) {
+          addNotification({
+            type: NotificationType.DUE_SOON,
+            message: `งาน "${task.taskTitle}" ใกล้จะถึงกำหนดส่งแล้ว`,
+            taskId: task.id,
+          });
+        }
+      }
+    });
+  }, [tasks, isLoading, notifications]);
+
+
   const handleUpdateTask = async (updatedTask: Task) => {
+    const originalTask = tasks.find(t => t.id === updatedTask.id);
+
+    if (originalTask) {
+        // Check for new assignment
+        if (!originalTask.assigneeId && updatedTask.assigneeId) {
+            const assignee = teamMembers.find(tm => tm.id === updatedTask.assigneeId);
+            if(assignee) {
+                addNotification({
+                    type: NotificationType.NEW_ASSIGNMENT,
+                    message: `งาน "${updatedTask.taskTitle}" ถูกมอบหมายให้ ${assignee.name}`,
+                    taskId: updatedTask.id,
+                });
+            }
+        }
+        
+        // Check for status update
+        if (originalTask.status !== updatedTask.status) {
+            addNotification({
+                type: NotificationType.STATUS_UPDATE,
+                message: `สถานะของงาน "${updatedTask.taskTitle}" เปลี่ยนเป็น "${updatedTask.status}"`,
+                taskId: updatedTask.id,
+            });
+        }
+    }
+    
     await updateTask(updatedTask);
     setSelectedTask(null);
-  };
-  
-  const updateContactMessages = async (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => {
-    setContactMessages(prevMessages => {
-        const newMessages = updater(prevMessages);
-        saveContactMessages(newMessages);
-        return newMessages;
-    });
   };
 
   const handleNotificationClick = (taskId: string) => {
     const taskToOpen = tasks.find(t => t.id === taskId);
     if (taskToOpen) {
       setSelectedTask(taskToOpen);
-      const updatedNotifications = notifications.map(n => n.taskId === taskId ? { ...n, isRead: true } : n);
+      const updatedNotifications = notifications.map(n => n.taskId === taskId && !n.isRead ? { ...n, isRead: true } : n);
       saveNotifications(updatedNotifications);
     }
   };
@@ -263,8 +313,10 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     saveNotifications(updatedNotifications);
   };
 
-  const handleClearNotifications = () => {
-    saveNotifications([]);
+  const handleClearNotifications = async () => {
+     if(window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบการแจ้งเตือนทั้งหมด?')) {
+        await saveNotifications([]);
+    }
   };
 
   const handleMarkAllAsRead = () => {
@@ -339,7 +391,12 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
                   deleteUser={deleteUserService}
                 />;
       case 'inbox':
-        return <ContactMessages messages={contactMessages} updateMessages={updateContactMessages} />;
+        return <ContactMessages 
+                  messages={contactMessages} 
+                  onUpdateMessage={updateContactMessage}
+                  onDeleteMessage={deleteContactMessage}
+                  onClearAllMessages={deleteAllContactMessages}
+               />;
       case 'settings':
         return <Settings theme={theme} toggleTheme={toggleTheme} />;
       default:

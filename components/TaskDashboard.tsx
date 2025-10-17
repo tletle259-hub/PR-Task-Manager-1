@@ -375,7 +375,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
 
   return (
     <div>
-      <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-md mb-6 interactive-glow">
+      <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-md mb-6">
         <div className="relative mb-4">
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
           <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />

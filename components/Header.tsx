@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect } from 'react';
 import { FiSun, FiMoon, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiUser } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -102,6 +100,7 @@ const getColorForString = (str: string) => {
 const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggleSidebar, notifications, onNotificationClick, onDeleteNotification, onClearNotifications, onMarkAllRead }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -112,8 +111,25 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timerId);
+  }, []);
   
   const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const formattedDateTime = `${currentTime.toLocaleDateString('th-TH', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })} เวลา ${currentTime.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })}`;
 
   return (
     <header className="bg-white dark:bg-dark-card p-4 shadow-sm flex justify-between items-center border-b border-gray-200 dark:border-dark-border">
@@ -127,7 +143,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
         </button>
         <div>
             <h2 className="text-xl font-semibold">ยินดีต้อนรับ, {currentUser?.name || 'ทีม'}!</h2>
-            <p className="text-sm text-gray-500 dark:text-dark-text-muted">ภาพรวมงานทั้งหมดของคุณในวันนี้</p>
+            <p className="text-sm text-gray-500 dark:text-dark-text-muted">{formattedDateTime}</p>
         </div>
       </div>
       <div className="flex items-center gap-4">

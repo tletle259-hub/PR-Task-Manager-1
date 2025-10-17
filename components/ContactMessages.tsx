@@ -2,14 +2,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContactMessage } from '../types';
 import { FiInbox, FiTrash2, FiChevronDown, FiMail, FiUser, FiClock, FiPhone } from 'react-icons/fi';
-import { saveContactMessages } from '../services/contactService';
 
 interface ContactMessagesProps {
   messages: ContactMessage[];
-  updateMessages: (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => Promise<void>;
+  onUpdateMessage: (messageId: string, updates: Partial<ContactMessage>) => Promise<void>;
+  onDeleteMessage: (messageId: string) => Promise<void>;
+  onClearAllMessages: () => Promise<void>;
 }
 
-const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, updateMessages }) => {
+const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, onUpdateMessage, onDeleteMessage, onClearAllMessages }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const handleToggle = (messageId: string) => {
@@ -20,20 +21,20 @@ const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, updateMessa
     if (newExpandedId) {
       const message = messages.find(m => m.id === messageId);
       if (message && !message.isRead) {
-        updateMessages(prev => prev.map(m => m.id === messageId ? { ...m, isRead: true } : m));
+        onUpdateMessage(messageId, { isRead: true });
       }
     }
   };
 
   const handleDelete = (messageId: string) => {
     if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อความนี้?')) {
-      updateMessages(prev => prev.filter(m => m.id !== messageId));
+      onDeleteMessage(messageId);
     }
   };
   
   const handleClearAll = () => {
      if (window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อความทั้งหมด? การกระทำนี้ไม่สามารถย้อนกลับได้')) {
-      updateMessages(() => []);
+      onClearAllMessages();
     }
   }
   

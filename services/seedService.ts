@@ -1,6 +1,5 @@
 import { seedInitialTasks } from './taskService';
 import { seedInitialTeamMembers } from './secureIdService';
-import { seedInitialNotifications } from './notificationService';
 import { seedInitialCalendarEvents } from './calendarService';
 
 let hasSeeded = false;
@@ -20,7 +19,6 @@ export const seedInitialData = async () => {
     await Promise.all([
       seedInitialTasks(),
       seedInitialTeamMembers(),
-      seedInitialNotifications(),
       seedInitialCalendarEvents(),
     ]);
     console.log("Initial data check complete.");

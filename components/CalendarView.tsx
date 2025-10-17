@@ -102,7 +102,7 @@ interface CalendarViewProps {
 }
 
 const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
-  const [currentDate, setCurrentDate] = useState(new Date('2025-11-01')); // Default to Nov 2025 to show mock data
+  const [currentDate, setCurrentDate] = useState(new Date('2025-10-17')); // Default to Oct 2025 to show mock data
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [customEvents, setCustomEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -143,36 +143,30 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
   const changeMonth = (offset: number) => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
+      newDate.setDate(1); // Set to first day to avoid month skipping issues
       newDate.setMonth(newDate.getMonth() + offset);
       return newDate;
     });
   };
 
   const MiniCalendar = () => {
-      const [miniDate, setMiniDate] = useState(currentDate);
-      const firstDay = new Date(miniDate.getFullYear(), miniDate.getMonth(), 1);
-      const lastDay = new Date(miniDate.getFullYear(), miniDate.getMonth() + 1, 0);
+      const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
       const days = Array.from({length: firstDay.getDay()}).map(() => null)
         .concat(Array.from({length: lastDay.getDate()}, (_, i) => i + 1));
       
-      const changeMiniMonth = (offset: number) => setMiniDate(d => {
-        const newD = new Date(d);
-        newD.setMonth(newD.getMonth() + offset);
-        return newD;
-      });
-
       return <div className="p-4">
           <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold">{miniDate.toLocaleDateString('th-TH', {month: 'long', year: 'numeric'})}</span>
+              <span className="font-semibold">{currentDate.toLocaleDateString('th-TH', {month: 'long', year: 'numeric'})}</span>
               <div>
-                  <button onClick={() => changeMiniMonth(-1)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><FiChevronLeft size={16}/></button>
-                  <button onClick={() => changeMiniMonth(1)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><FiChevronRight size={16}/></button>
+                  <button onClick={() => changeMonth(-1)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><FiChevronLeft size={16}/></button>
+                  <button onClick={() => changeMonth(1)} className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"><FiChevronRight size={16}/></button>
               </div>
           </div>
           <div className="grid grid-cols-7 text-center text-xs gap-1">
               {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(d => <span key={d} className="text-gray-500">{d}</span>)}
               {days.map((d, i) => (
-                  <button key={i} disabled={!d} onClick={() => d && setCurrentDate(new Date(miniDate.getFullYear(), miniDate.getMonth(), d))} className={`w-8 h-8 rounded-full transition-colors ${d ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : ''} ${d && isSameDay(currentDate, new Date(miniDate.getFullYear(), miniDate.getMonth(), d)) ? 'bg-brand-primary text-white' : ''} ${d && isSameDay(new Date(), new Date(miniDate.getFullYear(), miniDate.getMonth(), d)) ? 'font-bold ring-1 ring-brand-primary' : ''}`}>
+                  <button key={i} disabled={!d} onClick={() => d && setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), d))} className={`w-8 h-8 rounded-full transition-colors ${d ? 'hover:bg-gray-200 dark:hover:bg-gray-600' : ''} ${d && isSameDay(currentDate, new Date(currentDate.getFullYear(), currentDate.getMonth(), d)) ? 'bg-brand-primary text-white' : ''} ${d && isSameDay(new Date(), new Date(currentDate.getFullYear(), currentDate.getMonth(), d)) ? 'font-bold ring-1 ring-brand-primary' : ''}`}>
                       {d}
                   </button>
               ))}
@@ -203,8 +197,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
                       }
                   }) : [];
                   
-                  return <div key={index} onClick={() => day.date && !itemsForDay.length && (setSelectedEvent({start: day.date.toISOString()}), setIsModalOpen(true))} className={`relative flex flex-col p-1.5 rounded-lg transition-colors min-h-[100px] overflow-hidden ${day.date ? 'bg-white dark:bg-gray-800/50 cursor-pointer' : 'bg-gray-50 dark:bg-gray-800/20'}`}>
-                       {day.date && <span className={`self-end text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isSameDay(day.date, today) ? 'bg-brand-primary text-white' : 'text-gray-500 dark:text-gray-400'}`}>{day.date.getDate()}</span>}
+                  return <div key={index} onClick={() => day.date && !itemsForDay.length && (setSelectedEvent({start: day.date.toISOString()}), setIsModalOpen(true))} className={`relative flex flex-col p-1.5 rounded-lg transition-colors min-h-[100px] overflow-hidden ${day.date ? 'bg-white dark:bg-dark-card/50 cursor-pointer' : 'bg-gray-50 dark:bg-dark-bg/20'}`}>
+                       {day.date && <span className={`self-end text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isSameDay(day.date, today) ? 'bg-brand-primary text-white' : 'text-gray-500 dark:text-dark-text-muted'}`}>{day.date.getDate()}</span>}
                       <div className="flex-grow mt-1 space-y-1 overflow-y-auto text-left text-xs">
                           {itemsForDay.slice(0,3).map(item => {
                               // FIX: Use type guards to safely access properties and pass correct types to handlers.
@@ -249,8 +243,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
                            return isSameDay(new Date(item.start), day);
                        }
                    });
-                   return <div key={day.toISOString()} className="bg-white dark:bg-gray-800/50 rounded-lg p-2 flex flex-col">
-                       <div className={`text-center mb-2 pb-1 border-b ${isSameDay(day, today) ? 'text-brand-primary font-bold' : ''}`}>
+                   return <div key={day.toISOString()} className="bg-white dark:bg-dark-card/50 rounded-lg p-2 flex flex-col">
+                       <div className={`text-center mb-2 pb-1 border-b dark:border-dark-border ${isSameDay(day, today) ? 'text-brand-primary font-bold' : ''}`}>
                            <p className="text-sm">{day.toLocaleDateString('th-TH', {weekday: 'short'})}</p>
                            <p className="text-xl">{day.getDate()}</p>
                        </div>
@@ -293,7 +287,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
               const dateB = b.itemType === 'task' ? new Date(b.dueDate) : new Date(b.start);
               return dateA.getTime() - dateB.getTime()
           });
-          return <div className="bg-white dark:bg-gray-800/50 rounded-lg p-4 flex-grow overflow-y-auto">
+          return <div className="bg-white dark:bg-dark-card/50 rounded-lg p-4 flex-grow overflow-y-auto">
               <h3 className="text-xl font-bold mb-4">{currentDate.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h3>
               <div className="space-y-2">{itemsForDay.map(item => {
                 // FIX: Use type guards to safely access properties and pass correct types to handlers.
@@ -325,11 +319,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
   
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl shadow-lg h-full flex flex-col md:flex-row gap-4">
+    <div className="bg-white dark:bg-dark-card p-2 sm:p-4 rounded-xl shadow-lg h-full flex flex-col md:flex-row gap-4">
        <EventModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveEvent} onDelete={handleDeleteEvent} event={selectedEvent} />
       
        {/* Sidebar */}
-       <aside className="w-full md:w-64 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+       <aside className="w-full md:w-64 flex-shrink-0 bg-gray-50 dark:bg-dark-bg/50 rounded-lg">
            <div className="p-4">
                <button onClick={() => {setSelectedEvent(null); setIsModalOpen(true)}} className="icon-interactive w-full bg-brand-primary text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors">
                    <FiPlus/> เหตุการณ์ใหม่
@@ -361,7 +355,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
             {['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'].map(day => <div key={day} className="md:hidden">{day}</div>)}
         </div>
         
-        <main className="flex-grow flex flex-col">
+        <main className="flex-grow flex flex-col bg-gray-100 dark:bg-dark-bg rounded-lg p-1">
             <AnimatePresence mode="wait">
                 <motion.div key={viewMode + currentDate.getMonth()} initial={{ opacity: 0.5 }} animate={{ opacity: 1 }} exit={{ opacity: 0.5 }} transition={{ duration: 0.2 }} className="flex-grow flex flex-col">
                     <RenderView />
