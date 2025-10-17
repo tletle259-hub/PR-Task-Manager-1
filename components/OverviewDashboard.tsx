@@ -1,12 +1,23 @@
-
-
-
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { motion } from 'framer-motion';
-import { FiArchive, FiCheckCircle, FiClock, FiLoader, FiUsers, FiXCircle, FiUser } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiArchive, FiCheckCircle, FiClock, FiLoader, FiUsers, FiXCircle, FiUser, FiDownload } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType } from '../types';
 import { TASK_TYPE_COLORS } from '../constants';
+
+// --- HELPER FUNCTIONS ---
+const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+const formatToYyyyMmDd = (date: Date) => {
+    const d = new Date(date);
+    let month = '' + (d.getMonth() + 1);
+    let day = '' + d.getDate();
+    const year = d.getFullYear();
+    if (month.length < 2) month = '0' + month;
+    if (day.length < 2) day = '0' + day;
+    return [year, month, day].join('-');
+};
+const MONTH_NAMES_TH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
 
 interface OverviewDashboardProps {
   tasks: Task[];
@@ -51,11 +62,45 @@ const getColorForString = (str: string) => {
 
 
 const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMembers, onSetFilters, onSelectTask }) => {
-  const totalTasks = tasks.length;
-  const completedTasks = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
-  const inProgressTasks = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-  const notStartedTasks = tasks.filter(t => t.status === TaskStatus.NOT_STARTED).length;
-  const cancelledTasks = tasks.filter(t => t.status === TaskStatus.CANCELLED).length;
+  const [filterMode, setFilterMode] = useState<'all' | 'year' | 'month' | 'day'>('all');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedDate, setSelectedDate] = useState(formatToYyyyMmDd(new Date()));
+  
+  const [exportStartDate, setExportStartDate] = useState(() => formatToYyyyMmDd(new Date(new Date().getFullYear(), 0, 1)));
+  const [exportEndDate, setExportEndDate] = useState(() => formatToYyyyMmDd(new Date()));
+  
+  const availableYears = useMemo(() => {
+    const years = new Set(tasks.map(t => new Date(t.timestamp).getFullYear()));
+    if (!years.has(new Date().getFullYear())) {
+        years.add(new Date().getFullYear());
+    }
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    if (filterMode === 'all') return tasks;
+    return tasks.filter(task => {
+        const taskDate = new Date(task.timestamp);
+        if (filterMode === 'year') {
+            return taskDate.getFullYear() === selectedYear;
+        }
+        if (filterMode === 'month') {
+            return taskDate.getFullYear() === selectedYear && taskDate.getMonth() === selectedMonth;
+        }
+        if (filterMode === 'day') {
+            return formatToYyyyMmDd(taskDate) === selectedDate;
+        }
+        return true;
+    });
+  }, [tasks, filterMode, selectedYear, selectedMonth, selectedDate]);
+
+
+  const totalTasks = filteredTasks.length;
+  const completedTasks = filteredTasks.filter(t => t.status === TaskStatus.COMPLETED).length;
+  const inProgressTasks = filteredTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
+  const notStartedTasks = filteredTasks.filter(t => t.status === TaskStatus.NOT_STARTED).length;
+  const cancelledTasks = filteredTasks.filter(t => t.status === TaskStatus.CANCELLED).length;
 
   const statusData = [
     { name: TaskStatus.COMPLETED, value: completedTasks, color: '#10b981' },
@@ -67,7 +112,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
   const taskTypeData = Object.values(TaskType)
     .map(type => ({
       name: type,
-      count: tasks.filter(t => t.taskType === type).length,
+      count: filteredTasks.filter(t => t.taskType === type).length,
       fill: TASK_TYPE_COLORS[type]?.hex || '#8884d8',
     }))
     .filter(item => item.count > 0);
@@ -77,14 +122,14 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 5);
 
-  const newestTasks = tasks
+  const newestTasks = filteredTasks
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
     .slice(0, 5);
 
   const memberWorkload = teamMembers.map(member => ({
     id: member.id,
     name: member.name,
-    tasks: tasks.filter(t => t.assigneeId === member.id && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELLED).length
+    tasks: filteredTasks.filter(t => t.assigneeId === member.id && t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELLED).length
   }));
 
   const handlePieClick = (data: any) => {
@@ -97,11 +142,257 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
     }
   };
 
+    const getExportDateRangeString = (): string => {
+        const start = new Date(exportStartDate);
+        const end = new Date(exportEndDate);
+        start.setMinutes(start.getMinutes() + start.getTimezoneOffset());
+        end.setMinutes(end.getMinutes() + end.getTimezoneOffset());
+        const startStr = start.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        const endStr = end.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        return `ข้อมูลตั้งแต่วันที่ ${startStr} ถึงวันที่ ${endStr}`;
+    };
+
+    const getTasksInDateRange = () => {
+      const start = new Date(exportStartDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(exportEndDate);
+      end.setHours(23, 59, 59, 999);
+      return tasks.filter(task => {
+          const taskDate = new Date(task.timestamp);
+          return taskDate >= start && taskDate <= end;
+      });
+    };
+
+    const getFilename = (): string => {
+        return `Task_Summary_Report_${exportStartDate}_to_${exportEndDate}`;
+    };
+
+    const handleExportCSV = () => {
+        if (!exportStartDate || !exportEndDate) {
+            alert("กรุณาเลือกช่วงวันที่ก่อนส่งออกรายงาน");
+            return;
+        }
+        const tasksInDateRange = getTasksInDateRange();
+
+        if (tasksInDateRange.length === 0) {
+            alert("ไม่มีข้อมูลสำหรับส่งออกในช่วงเวลาที่เลือก");
+            return;
+        }
+        
+        const reportTitle = "สรุปรายงานภาระงานส่วนงานสื่อสารองค์กร";
+        const dateRange = getExportDateRangeString();
+        const exportDate = `วันที่ส่งออก: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+
+        let csvContent = `${reportTitle}\n${dateRange}\n${exportDate}\n\n`;
+
+        // Team Overview Section
+        const teamOverview = {
+            "งานทั้งหมด": tasksInDateRange.length,
+            "เสร็จสิ้น": tasksInDateRange.filter(t => t.status === TaskStatus.COMPLETED).length,
+            "กำลังดำเนินการ": tasksInDateRange.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+            "ยังไม่ดำเนินการ": tasksInDateRange.filter(t => t.status === TaskStatus.NOT_STARTED).length,
+            "ยกเลิก": tasksInDateRange.filter(t => t.status === TaskStatus.CANCELLED).length,
+        };
+        csvContent += "ภาพรวมของทีมทั้งหมด\n";
+        csvContent += Object.keys(teamOverview).join(',') + '\n';
+        csvContent += Object.values(teamOverview).map(val => `"${val}"`).join(',') + '\n\n';
+        
+        // Detailed Task List
+        const taskDetailHeaders = ["รหัสงาน", "ชื่องาน", "สถานะ", "วันที่สั่งงาน", "กำหนดส่ง", "ผู้สั่งงาน", "ผู้รับผิดชอบ", "ตำแหน่งผู้รับผิดชอบ"];
+        
+        csvContent += "รายการงานทั้งหมด (รายบุคคล)\n";
+        csvContent += taskDetailHeaders.join(',') + '\n';
+
+        tasksInDateRange.forEach(task => {
+            const assignee = teamMembers.find(m => m.id === task.assigneeId);
+            const row = [
+                task.id,
+                task.taskTitle,
+                task.status,
+                new Date(task.timestamp).toLocaleDateString('th-TH'),
+                new Date(task.dueDate).toLocaleDateString('th-TH'),
+                task.requesterName,
+                assignee ? assignee.name : "ยังไม่มอบหมาย",
+                assignee ? assignee.position : "-",
+            ];
+            csvContent += row.map(val => `"${val}"`).join(',') + '\n';
+        });
+
+        const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${getFilename()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const handleExportDOC = () => {
+        if (!exportStartDate || !exportEndDate) {
+            alert("กรุณาเลือกช่วงวันที่ก่อนส่งออกรายงาน");
+            return;
+        }
+        const tasksInDateRange = getTasksInDateRange();
+
+        if (tasksInDateRange.length === 0) {
+            alert("ไม่มีข้อมูลสำหรับส่งออกในช่วงเวลาที่เลือก");
+            return;
+        }
+
+        // --- Data Preparation ---
+        const teamOverview = {
+            "งานทั้งหมด": tasksInDateRange.length,
+            "เสร็จสิ้น": tasksInDateRange.filter(t => t.status === TaskStatus.COMPLETED).length,
+            "กำลังดำเนินการ": tasksInDateRange.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+            "ยังไม่ดำเนินการ": tasksInDateRange.filter(t => t.status === TaskStatus.NOT_STARTED).length,
+            "ยกเลิก": tasksInDateRange.filter(t => t.status === TaskStatus.CANCELLED).length,
+        };
+
+        const individualBreakdown = teamMembers.map(member => {
+            const memberTasks = tasksInDateRange.filter(t => t.assigneeId === member.id);
+            return {
+                summary: {
+                    "ชื่อ-สกุล": member.name,
+                    "ตำแหน่ง": member.position,
+                    "งานที่รับผิดชอบ": memberTasks.length,
+                    "เสร็จสิ้น": memberTasks.filter(t => t.status === TaskStatus.COMPLETED).length,
+                    "กำลังดำเนินการ": memberTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length,
+                },
+                tasks: memberTasks.map(t => ({
+                    "รหัสงาน": t.id,
+                    "ชื่องาน": t.taskTitle,
+                    "ผู้สั่งงาน": t.requesterName,
+                    "สถานะ": t.status,
+                })),
+            };
+        }).filter(m => m.summary["งานที่รับผิดชอบ"] > 0); // Only include members with tasks in the range
+
+        // --- HTML Generation ---
+        const reportTitle = "สรุปรายงานภาระงานส่วนงานสื่อสารองค์กร";
+        const dateRange = getExportDateRangeString();
+        const exportDate = `วันที่ส่งออก: ${new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+        
+        const teamOverviewHtml = `
+            <h2>ภาพรวมของทีมทั้งหมด</h2>
+            <table>
+                <thead>
+                    <tr>${Object.keys(teamOverview).map(h => `<th>${h}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                    <tr>${Object.values(teamOverview).map(v => `<td>${v}</td>`).join('')}</tr>
+                </tbody>
+            </table>
+        `;
+
+        const individualBreakdownHtml = individualBreakdown.map(memberData => {
+            const summaryRow = `<tr>${Object.values(memberData.summary).map(val => `<td>${val}</td>`).join('')}</tr>`;
+            
+            const tasksList = memberData.tasks.length > 0
+                ? `<ul class="task-list">${memberData.tasks.map(t => `<li><strong>${t.รหัสงาน}:</strong> ${t.ชื่องาน} - <i>(${t.สถานะ})</i><br/><small>&nbsp;&nbsp;&nbsp;ผู้สั่งงาน: ${t.ผู้สั่งงาน}</small></li>`).join('')}</ul>`
+                : '<p class="no-tasks">- ไม่มี -</p>';
+
+            const tasksRow = `<tr><td colspan="${Object.keys(memberData.summary).length}"><strong>รายละเอียดงาน:</strong>${tasksList}</td></tr>`;
+
+            return `
+                <tbody class="member-section">
+                    ${summaryRow}
+                    ${tasksRow}
+                </tbody>
+            `;
+        }).join('');
+
+        const htmlContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: 'TH SarabunPSK', 'Angsana New', sans-serif; font-size: 16pt; color: #333; }
+                    table { border-collapse: collapse; width: 100%; margin-bottom: 25px; }
+                    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+                    th { background-color: #f2f2f2; font-weight: bold; color: #555; }
+                    h1 { font-size: 24pt; font-weight: bold; color: #000; }
+                    h2 { font-size: 20pt; font-weight: bold; border-bottom: 2px solid #ddd; padding-bottom: 5px; margin-top: 30px; }
+                    h3 { font-size: 18pt; font-weight: bold; }
+                    .member-section > tr:first-child > td { font-weight: bold; }
+                    .task-list { margin-top: 5px; margin-bottom: 5px; padding-left: 20px; list-style-type: square; }
+                    .task-list li { margin-bottom: 8px; }
+                    .no-tasks { margin-left: 15px; font-style: italic; color: #888; }
+                </style>
+            </head>
+            <body>
+                <h1>${reportTitle}</h1>
+                <h3>${dateRange}</h3>
+                <p>${exportDate}</p>
+                ${teamOverviewHtml}
+                <h2>สรุปรายบุคคล</h2>
+                <table>
+                    <thead>
+                        <tr>${Object.keys(individualBreakdown[0]?.summary || {}).map(h => `<th>${h}</th>`).join('')}</tr>
+                    </thead>
+                    ${individualBreakdownHtml}
+                </table>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\uFEFF', htmlContent], { type: 'application/msword' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", `${getFilename()}.doc`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
 
   return (
     <div className="space-y-6">
+        <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-lg interactive-glow">
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-dark-bg/50 rounded-lg">
+                    {(['all', 'year', 'month', 'day'] as const).map(mode => (
+                         <button key={mode} onClick={() => setFilterMode(mode)} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${filterMode === mode ? 'bg-white dark:bg-dark-muted shadow' : 'hover:bg-gray-200 dark:hover:bg-dark-muted/50'}`}>
+                            {{all: 'ทั้งหมด', year: 'รายปี', month: 'รายเดือน', day: 'รายวัน'}[mode]}
+                        </button>
+                    ))}
+                </div>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={filterMode}
+                        initial={{ opacity: 0, width: 0 }}
+                        animate={{ opacity: 1, width: 'auto' }}
+                        exit={{ opacity: 0, width: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex items-center gap-2 overflow-hidden"
+                    >
+                         {filterMode === 'year' && (
+                             <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="form-input">
+                                 {availableYears.map(year => <option key={year} value={year}>ปี {Number(year) + 543}</option>)}
+                             </select>
+                         )}
+                         {filterMode === 'month' && (
+                             <>
+                                <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="form-input">
+                                    {availableYears.map(year => <option key={year} value={year}>ปี {Number(year) + 543}</option>)}
+                                </select>
+                                <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="form-input">
+                                    {MONTH_NAMES_TH.map((month, index) => <option key={month} value={index}>{month}</option>)}
+                                </select>
+                             </>
+                         )}
+                         {filterMode === 'day' && (
+                             <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="form-input" />
+                         )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-         <StatCard icon={<FiArchive size={24}/>} title="งานทั้งหมด" value={totalTasks} gradient="bg-gradient-to-br from-purple-500 to-indigo-600" />
+         <StatCard icon={<FiArchive size={24}/>} title="งานทั้งหมด (ที่กรอง)" value={totalTasks} gradient="bg-gradient-to-br from-purple-500 to-indigo-600" />
          <StatCard icon={<FiUsers size={24} />} title="สมาชิกในทีม" value={teamMembers.length} gradient="bg-gradient-to-br from-sky-500 to-cyan-500" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -119,7 +410,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
               <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label fill="#8884d8" labelLine={{ stroke: 'currentColor' }} className="text-gray-500 dark:text-dark-text-muted" onClick={handlePieClick}>
                 {statusData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} className="cursor-pointer focus:outline-none" />)}
               </Pie>
-              {/* FIX: Removed invalid `className` prop and `itemStyle` to fix TS error and dark mode text color. Text color is now handled by `wrapperClassName`. */}
               <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" />
               <Legend wrapperStyle={{cursor: 'pointer'}} onClick={(e) => onSetFilters({status: e.value})}/>
             </PieChart>
@@ -132,7 +422,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" className="dark:stroke-dark-border" />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:!fill-dark-text-muted" angle={-45} textAnchor="end" height={80} interval={0} />
               <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:!fill-dark-text-muted"/>
-              {/* FIX: Added `dark:!text-dark-text` to wrapperClassName for consistent dark mode styling. */}
               <Tooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }}/>
               <Bar dataKey="count" name="จำนวนงาน" className="cursor-pointer">
                 {taskTypeData.map((entry, index) => (
@@ -147,7 +436,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
-                <h3 className="font-bold text-lg mb-4">🔔 งานใหม่ล่าสุด</h3>
+                <h3 className="font-bold text-lg mb-4">🔔 งานใหม่ล่าสุด </h3>
                 <ul className="space-y-1">
                     {newestTasks.length > 0 ? newestTasks.map(task => (
                         <li key={task.id} className="flex justify-between items-center gap-4 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-muted cursor-pointer" onClick={() => onSelectTask(task)}>
@@ -159,7 +448,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
                                 <p className="text-sm text-gray-500 dark:text-dark-text-muted">{new Date(task.timestamp).toLocaleDateString('th-TH')}</p>
                             </div>
                         </li>
-                    )) : <p className="text-center text-gray-500 dark:text-dark-text-muted italic py-4">ไม่มีงานใหม่</p>}
+                    )) : <p className="text-center text-gray-500 dark:text-dark-text-muted italic py-4">ไม่มีงานใหม่ในช่วงเวลานี้</p>}
                 </ul>
             </div>
             <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
@@ -180,7 +469,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
             </div>
         </div>
         <div className="lg:col-span-1 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
-          <h3 className="font-bold text-lg mb-4">ภาระงานของสมาชิก</h3>
+          <h3 className="font-bold text-lg mb-4">ภาระงานของสมาชิก </h3>
            <ul className="space-y-1">
             {memberWorkload.map(member => (
                 <li key={member.id} className="flex justify-between items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-muted cursor-pointer" onClick={() => onSetFilters({ assignee: member.id })}>
@@ -196,6 +485,58 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
           </ul>
         </div>
       </div>
+      <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow mt-6">
+            <h3 className="text-xl font-bold mb-2">ส่งออกรายงานสรุป</h3>
+            <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-4">
+                เลือกช่วงวันที่ที่ต้องการเพื่อส่งออกข้อมูลสรุปภาระงานของสมาชิกในทีม 
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 border-b dark:border-dark-border pb-6">
+                <div>
+                    <label htmlFor="exportStartDate" className="block text-sm font-medium text-gray-600 dark:text-dark-text-muted mb-1">ตั้งแต่วันที่</label>
+                    <input
+                        type="date"
+                        id="exportStartDate"
+                        value={exportStartDate}
+                        onChange={(e) => setExportStartDate(e.target.value)}
+                        className="form-input"
+                    />
+                </div>
+                <div>
+                    <label htmlFor="exportEndDate" className="block text-sm font-medium text-gray-600 dark:text-dark-text-muted mb-1">ถึงวันที่</label>
+                    <input
+                        type="date"
+                        id="exportEndDate"
+                        value={exportEndDate}
+                        onChange={(e) => setExportEndDate(e.target.value)}
+                        className="form-input"
+                    />
+                </div>
+            </div>
+            <div className="flex flex-wrap gap-4">
+                <button onClick={handleExportCSV} className="icon-interactive bg-green-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-opacity">
+                    <FiDownload />
+                    Export as CSV
+                </button>
+                 <button onClick={handleExportDOC} className="icon-interactive bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-opacity">
+                    <FiDownload />
+                    Export as DOC
+                </button>
+            </div>
+        </div>
+       <style>{`
+        .form-input {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border-width: 1px;
+            border-color: #d1d5db; /* border-gray-300 */
+            background-color: #f9fafb; /* bg-gray-50 */
+            width: 100%;
+        }
+        .dark .form-input {
+            border-color: #4b5563; /* dark:border-gray-600 */
+            background-color: #374151; /* dark:bg-gray-700 */
+        }
+    `}</style>
     </div>
   );
 };
