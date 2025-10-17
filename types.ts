@@ -64,11 +64,28 @@ export interface Task {
 }
 
 export interface TeamMember {
-  id: string;
+  id: string; // Document ID, e.g., TM01
   name:string;
   position: string;
   avatar: string;
+  username?: string;
+  password?: string;
 }
+
+// New User interface for requesters
+export interface User {
+  id: string; // Firestore document ID
+  firstNameTh: string;
+  lastNameTh: string;
+  firstNameEn: string;
+  lastNameEn: string;
+  position: string;
+  department: string;
+  email: string;
+  username: string;
+  password?: string; // Should be hashed in a real app, plaintext for this scope
+}
+
 
 export interface CalendarEvent {
   id: string;

@@ -1,17 +1,7 @@
-
-
-
 import { CalendarEvent, Task, TeamMember, TaskStatus, TaskType, Notification, NotificationType } from './types';
 
 export const CALENDAR_EVENTS_STORAGE_KEY = 'pr-calendar-events';
 export const CONTACT_MESSAGES_STORAGE_KEY = 'pr-contact-messages';
-
-export const MOCK_TEAM_MEMBERS: TeamMember[] = [
-  { id: 'TM01', name: 'สมชาย ใจดี', position: 'ผู้จัดการ', avatar: 'https://i.pravatar.cc/150?u=TM01' },
-  { id: 'TM02', name: 'สมหญิง จริงใจ', position: 'กราฟิกดีไซเนอร์', avatar: 'https://i.pravatar.cc/150?u=TM02' },
-  { id: 'TM03', name: 'ณัฐพงศ์ ทรงพลัง', position: 'นักเขียนคอนเทนต์', avatar: 'https://i.pravatar.cc/150?u=TM03' },
-  { id: 'TM04', name: 'กนกวรรณ งามเลิศ', position: 'ช่างภาพ/วิดีโอ', avatar: 'https://i.pravatar.cc/150?u=TM04' },
-];
 
 export const MOCK_TASKS: Task[] = [
   {

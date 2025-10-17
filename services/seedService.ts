@@ -1,8 +1,7 @@
 import { seedInitialTasks } from './taskService';
-import { seedInitialTeamMembers } from './teamService';
+import { seedInitialTeamMembers } from './secureIdService';
 import { seedInitialNotifications } from './notificationService';
 import { seedInitialCalendarEvents } from './calendarService';
-import { seedInitialAdminPassword } from './securityService';
 
 let hasSeeded = false;
 
@@ -23,7 +22,6 @@ export const seedInitialData = async () => {
       seedInitialTeamMembers(),
       seedInitialNotifications(),
       seedInitialCalendarEvents(),
-      seedInitialAdminPassword(),
     ]);
     console.log("Initial data check complete.");
     hasSeeded = true;

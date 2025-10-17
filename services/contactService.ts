@@ -1,4 +1,4 @@
-import { collection, onSnapshot, addDoc, writeBatch, doc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, writeBatch, doc, getDocs, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { ContactMessage } from '../types';
 
@@ -6,8 +6,9 @@ const MESSAGES_COLLECTION = 'contactMessages';
 const messagesCollectionRef = collection(db, MESSAGES_COLLECTION);
 
 
+// Fix: Explicitly type the snapshot parameter as QuerySnapshot<DocumentData> to resolve the type error.
 export const onContactMessagesUpdate = (callback: (messages: ContactMessage[]) => void): (() => void) => {
-    return onSnapshot(messagesCollectionRef, (snapshot) => {
+    return onSnapshot(messagesCollectionRef, (snapshot: QuerySnapshot<DocumentData>) => {
         const messages: ContactMessage[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ContactMessage));
         callback(messages);
     });
@@ -31,7 +32,8 @@ export const saveContactMessages = async (messages: ContactMessage[]): Promise<v
     // For simple "mark as read" or single deletions, a more specific function would be better.
     // This example is for clearing all messages.
     if (messages.length === 0) {
-        const allMessagesSnapshot = await collection(db, MESSAGES_COLLECTION).get();
+        // Fix: Use getDocs() function instead of the non-existent .get() method on a collection reference.
+        const allMessagesSnapshot = await getDocs(messagesCollectionRef);
         allMessagesSnapshot.forEach(doc => batch.delete(doc.ref));
     } else {
        messages.forEach(msg => {

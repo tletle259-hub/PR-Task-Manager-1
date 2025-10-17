@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiEye, FiInfo, FiSun, FiMoon, FiKey } from 'react-icons/fi';
-import PasswordManager from './PasswordManager';
+import { FiEye, FiInfo, FiSun, FiMoon } from 'react-icons/fi';
 
 const SettingsSection: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode; }> = ({ icon, title, children }) => (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
@@ -23,10 +22,6 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
     <div className="max-w-4xl mx-auto space-y-6">
         <h2 className="text-3xl font-bold">ตั้งค่า</h2>
         
-        <SettingsSection icon={<FiKey size={24} />} title="จัดการรหัสผ่าน">
-            <PasswordManager />
-        </SettingsSection>
-
         <SettingsSection icon={<FiEye size={24} />} title="ลักษณะที่ปรากฏ">
             <div className="flex justify-between items-center p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                  <div>

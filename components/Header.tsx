@@ -1,10 +1,10 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSun, FiMoon, FiChevronDown, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiTrash2 } from 'react-icons/fi';
+import { FiSun, FiMoon, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiUser } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamMember, Notification, NotificationType } from '../types';
 
-// --- NOTIFICATION PANEL COMPONENT (INLINED) ---
 interface NotificationPanelProps {
   notifications: Notification[];
   onNotificationClick: (taskId: string) => void;
@@ -29,13 +29,13 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ notifications, on
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-gray-700 rounded-lg shadow-xl z-20 overflow-hidden border border-gray-200 dark:border-gray-600"
+            className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-dark-card rounded-lg shadow-xl z-20 overflow-hidden border border-gray-200 dark:border-dark-border"
         >
-            <header className="p-3 border-b border-gray-200 dark:border-gray-600">
+            <header className="p-3 border-b border-gray-200 dark:border-dark-border">
                 <div className="flex justify-between items-center">
                     <h3 className="font-bold">การแจ้งเตือน</h3>
                     <div className="flex gap-2">
-                        <button onClick={onMarkAllRead} className="icon-interactive text-xs text-blue-500 hover:underline">อ่านทั้งหมด</button>
+                        <button onClick={onMarkAllRead} className="icon-interactive text-xs text-brand-primary dark:text-dark-accent hover:underline">อ่านทั้งหมด</button>
                         <button onClick={onClearNotifications} className="icon-interactive text-xs text-red-500 hover:underline">ลบทั้งหมด</button>
                     </div>
                 </div>
@@ -44,22 +44,22 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ notifications, on
                 {notifications.length > 0 ? (
                     <ul>
                         {notifications.map(n => (
-                            <li key={n.id} className={`border-b border-gray-100 dark:border-gray-600 last:border-b-0 relative group ${!n.isRead ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                                <div onClick={() => onNotificationClick(n.taskId)} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                            <li key={n.id} className={`border-b border-gray-100 dark:border-dark-muted/20 last:border-b-0 relative group ${!n.isRead ? 'bg-blue-50 dark:bg-dark-accent/10' : ''}`}>
+                                <div onClick={() => onNotificationClick(n.taskId)} className="flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-card/50">
                                     <div className="mt-1 w-5 flex-shrink-0">{getIconForType(n.type)}</div>
                                     <div className="flex-grow">
-                                        <p className="text-sm text-gray-700 dark:text-gray-200">{n.message}</p>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{new Date(n.timestamp).toLocaleString('th-TH')}</p>
+                                        <p className="text-sm text-gray-800 dark:text-dark-text">{n.message}</p>
+                                        <p className="text-xs text-gray-500 dark:text-dark-text-muted mt-1">{new Date(n.timestamp).toLocaleString('th-TH')}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => onDeleteNotification(n.id)} className="icon-interactive absolute top-2 right-2 p-1 rounded-full text-gray-400 bg-transparent hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => onDeleteNotification(n.id)} className="icon-interactive absolute top-2 right-2 p-1 rounded-full text-gray-400 dark:text-dark-text-muted bg-transparent hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <FiX size={14} />
                                 </button>
                             </li>
                         ))}
                     </ul>
                 ) : (
-                    <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                    <div className="p-8 text-center text-sm text-gray-500 dark:text-dark-text-muted">
                         ไม่มีการแจ้งเตือนใหม่
                     </div>
                 )}
@@ -72,9 +72,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ notifications, on
 interface HeaderProps {
   theme: string;
   toggleTheme: () => void;
-  currentUser: TeamMember | null;
-  teamMembers: TeamMember[];
-  setCurrentUser: (user: TeamMember) => void;
+  currentUser: TeamMember;
   toggleSidebar: () => void;
   notifications: Notification[];
   onNotificationClick: (taskId: string) => void;
@@ -83,18 +81,30 @@ interface HeaderProps {
   onMarkAllRead: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, teamMembers, setCurrentUser, toggleSidebar, notifications, onNotificationClick, onDeleteNotification, onClearNotifications, onMarkAllRead }) => {
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+// Color generation for user icons
+const BG_COLORS = [
+    'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 
+    'bg-pink-500', 'bg-rose-500', 'bg-red-500', 'bg-orange-500', 'bg-amber-500'
+];
+
+const getColorForString = (str: string) => {
+  let hash = 0;
+  if (str.length === 0) return BG_COLORS[0];
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  const index = Math.abs(hash % BG_COLORS.length);
+  return BG_COLORS[index];
+};
+
+const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggleSidebar, notifications, onNotificationClick, onDeleteNotification, onClearNotifications, onMarkAllRead }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const userDropdownRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
   
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target as Node)) {
-        setIsUserDropdownOpen(false);
-      }
        if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
         setIsNotificationsOpen(false);
       }
@@ -102,33 +112,28 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, teamMe
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const handleUserChange = (user: TeamMember) => {
-    setCurrentUser(user);
-    setIsUserDropdownOpen(false);
-  };
   
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
-    <header className="bg-white dark:bg-gray-800 p-4 shadow-sm flex justify-between items-center">
+    <header className="bg-white dark:bg-dark-card p-4 shadow-sm flex justify-between items-center border-b border-gray-200 dark:border-dark-border">
       <div className="flex items-center gap-2">
         <button
             onClick={toggleSidebar}
             aria-label="Open menu"
-            className="p-2 -ml-2 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors md:hidden"
+            className="p-2 -ml-2 rounded-full text-gray-500 dark:text-dark-text-muted hover:bg-gray-200 dark:hover:bg-dark-muted transition-colors md:hidden"
         >
             <FiMenu size={24} />
         </button>
         <div>
             <h2 className="text-xl font-semibold">ยินดีต้อนรับ, {currentUser?.name || 'ทีม'}!</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">ภาพรวมงานทั้งหมดของคุณในวันนี้</p>
+            <p className="text-sm text-gray-500 dark:text-dark-text-muted">ภาพรวมงานทั้งหมดของคุณในวันนี้</p>
         </div>
       </div>
       <div className="flex items-center gap-4">
         <button
           onClick={toggleTheme}
-          className="icon-interactive p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          className="icon-interactive p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-muted dark:hover:bg-dark-border transition-colors"
         >
           {theme === 'light' ? <FiMoon size={20} /> : <FiSun size={20} />}
         </button>
@@ -138,12 +143,12 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, teamMe
             <button
               onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
               aria-label="Toggle notifications"
-              className="icon-interactive p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              className="icon-interactive p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-muted dark:hover:bg-dark-border transition-colors"
             >
               <FiBell size={20} />
             </button>
             {unreadCount > 0 && (
-                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-800 pointer-events-none">
+                 <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white ring-2 ring-white dark:ring-dark-card pointer-events-none">
                     {unreadCount}
                  </span>
             )}
@@ -161,48 +166,14 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, teamMe
           </AnimatePresence>
         </div>
         
-        <div className="relative" ref={userDropdownRef}>
-          <button onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            {currentUser && (
-              <>
-                <img src={currentUser.avatar} alt="User Avatar" className="w-10 h-10 rounded-full object-cover"/>
-                <div className='hidden sm:block'>
-                    <p className="font-semibold text-left text-sm">{currentUser.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 text-left">{currentUser.position}</p>
-                </div>
-                <FiChevronDown size={16} className={`transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
-              </>
-            )}
-          </button>
-
-          <AnimatePresence>
-            {isUserDropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-700 rounded-lg shadow-xl z-10 overflow-hidden border border-gray-200 dark:border-gray-600"
-              >
-                <div className="p-2">
-                    <p className="text-xs text-gray-500 dark:text-gray-300 px-2 mb-1">สลับผู้ใช้งาน</p>
-                    {teamMembers.map(member => (
-                       <button 
-                         key={member.id} 
-                         onClick={() => handleUserChange(member)}
-                         disabled={member.id === currentUser?.id}
-                         className="w-full flex items-center gap-3 p-2 rounded-md text-left hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                       >
-                         <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-full object-cover"/>
-                         <div>
-                           <p className="font-medium text-sm">{member.name}</p>
-                           <p className="text-xs text-gray-500 dark:text-gray-400">{member.position}</p>
-                         </div>
-                       </button>
-                    ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex items-center gap-2 p-1.5 rounded-lg">
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getColorForString(currentUser.id)} flex-shrink-0`}>
+                <FiUser size={20} className="text-white" />
+            </div>
+            <div className='hidden sm:block'>
+                <p className="font-semibold text-left text-sm">{currentUser.name}</p>
+                <p className="text-xs text-gray-500 dark:text-dark-text-muted text-left">{currentUser.position}</p>
+            </div>
         </div>
       </div>
     </header>

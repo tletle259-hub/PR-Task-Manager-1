@@ -115,7 +115,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
 
   const handleSaveEvent = async (event: Omit<CalendarEvent, 'id'> | CalendarEvent) => {
     if ('id' in event) {
-        await saveCalendarEvents([event]); // saveCalendarEvents can handle updates
+        const eventToSave = { ...event };
+        if (customEvents.find(e => e.id === event.id)) {
+             await saveCalendarEvents([eventToSave]);
+        } else {
+             delete (eventToSave as Partial<CalendarEvent>).id;
+             await addCalendarEvent(eventToSave);
+        }
     } else {
         await addCalendarEvent(event);
     }

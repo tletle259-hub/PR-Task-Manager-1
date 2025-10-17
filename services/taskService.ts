@@ -1,4 +1,4 @@
-import { collection, onSnapshot, getDocs, writeBatch, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, writeBatch, doc, setDoc, updateDoc, deleteDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Task } from '../types';
 import { MOCK_TASKS } from '../constants';
@@ -19,8 +19,9 @@ export const seedInitialTasks = async () => {
     }
 };
 
+// Fix: Explicitly type the snapshot parameter as QuerySnapshot<DocumentData> to resolve the type error.
 export const onTasksUpdate = (callback: (tasks: Task[]) => void): (() => void) => {
-    return onSnapshot(tasksCollectionRef, (snapshot) => {
+    return onSnapshot(tasksCollectionRef, (snapshot: QuerySnapshot<DocumentData>) => {
         const tasks: Task[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
         callback(tasks);
     });

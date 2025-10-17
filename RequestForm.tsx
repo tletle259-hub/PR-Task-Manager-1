@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiPaperclip, FiX, FiCalendar } from 'react-icons/fi';
-import { Task, TaskType, TaskStatus, Attachment, User } from '../types';
-import { GOOGLE_DRIVE_UPLOAD_URL } from '../config';
-import { RequesterProfile } from '../App';
+import { Task, TaskType, TaskStatus, Attachment, User } from './types';
+import { GOOGLE_DRIVE_UPLOAD_URL } from './config';
+import { RequesterProfile } from './App';
 import { AccountInfo } from '@azure/msal-browser';
 
 interface RequestFormProps {
@@ -173,11 +173,11 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
 
     try {
         if (!GOOGLE_DRIVE_UPLOAD_URL) {
-            console.warn("Google Drive upload URL is not configured. Skipping file uploads.");
+            console.warn("Google Drive upload URL is not configured. Skipping image uploads.");
         }
 
         const attachmentPromises = attachments.map(async (file): Promise<Attachment> => {
-            if (GOOGLE_DRIVE_UPLOAD_URL) {
+            if (file.type.startsWith('image/') && GOOGLE_DRIVE_UPLOAD_URL) {
                 try {
                     const base64Data = await fileToBase64(file);
                     const response = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
@@ -201,7 +201,6 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
                     console.error('Error uploading file to Google Drive:', file.name, error);
                 }
             }
-            // Fallback if upload fails or URL is not configured
             return { name: file.name, size: file.size, type: file.type };
         });
         

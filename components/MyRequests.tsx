@@ -6,23 +6,20 @@ import { TASK_STATUS_COLORS } from '../constants';
 
 interface MyRequestsProps {
   tasks: Task[];
+  userEmail: string;
 }
 
-const MyRequests: React.FC<MyRequestsProps> = ({ tasks }) => {
-  const [email, setEmail] = useState('');
+const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
   const [userTasks, setUserTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   
   useEffect(() => {
-    const storedEmail = localStorage.getItem('requesterEmail');
-    if (storedEmail) {
-      setEmail(storedEmail);
-      const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === storedEmail.toLowerCase());
+    if (userEmail) {
+      const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === userEmail.toLowerCase());
       setUserTasks(filtered);
-      setFilteredTasks(filtered);
     }
-  }, [tasks]);
+  }, [tasks, userEmail]);
 
   useEffect(() => {
     if (statusFilter === 'all') {
@@ -31,57 +28,12 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks }) => {
       setFilteredTasks(userTasks.filter(t => t.status === statusFilter));
     }
   }, [statusFilter, userTasks]);
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value;
-    setEmail(newEmail);
-    if(newEmail.trim() === '') {
-        localStorage.removeItem('requesterEmail');
-        setUserTasks([]);
-        setFilteredTasks([]);
-    }
-  };
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('requesterEmail', email.toLowerCase());
-    const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === email.toLowerCase());
-    setUserTasks(filtered);
-    setFilteredTasks(filtered);
-  };
   
-  if (!localStorage.getItem('requesterEmail')) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-lg mx-auto text-center bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg"
-      >
-        <h2 className="text-2xl font-bold mb-4">ติดตามสถานะงานของคุณ</h2>
-        <p className="mb-6 text-gray-600 dark:text-gray-400">กรุณากรอกอีเมลที่ใช้ในการแจ้งงานเพื่อดูรายการงานของคุณ</p>
-        <form onSubmit={handleEmailSubmit} className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="email"
-            value={email}
-            onChange={handleEmailChange}
-            placeholder="your.email@example.com"
-            required
-            className="flex-grow p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-brand-secondary focus:outline-none"
-          />
-          <button type="submit" className="icon-interactive bg-brand-secondary text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition-colors">
-            ค้นหา
-          </button>
-        </form>
-         {email && userTasks.length === 0 && <p className="mt-4 text-red-500">ไม่พบงานสำหรับอีเมลนี้</p>}
-      </motion.div>
-    );
-  }
-
   return (
     <div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-3xl font-bold">ติดตามสถานะงาน ({userTasks.length})</h2>
-        <button onClick={() => { localStorage.removeItem('requesterEmail'); setEmail(''); }} className="text-sm text-blue-500 hover:underline flex-shrink-0">เปลี่ยนอีเมล</button>
+        <p className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">แสดงรายการสำหรับ: {userEmail}</p>
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
         {(['all', ...Object.values(TaskStatus)] as const).map(status => (

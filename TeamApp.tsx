@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiFilePlus, FiCalendar, FiSettings, FiChevronDown, FiInbox } from 'react-icons/fi';
-import { Task, TeamMember, TaskStatus, Notification, ContactMessage } from './types';
+import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut } from 'react-icons/fi';
+import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage } from './types';
 import { onTasksUpdate, updateTask } from './services/taskService';
-import { onTeamMembersUpdate, saveTeamMembers } from './services/teamService';
+import { onTeamMembersUpdate, addTeamMember, updateTeamMember, deleteTeamMember } from './services/secureIdService';
 import { onNotificationsUpdate, saveNotifications } from './services/notificationService';
 import { onContactMessagesUpdate, saveContactMessages } from './services/contactService';
+import { onUsersUpdate, updateUser as updateUserService, deleteUser as deleteUserService } from './services/userService';
 import { seedInitialData } from './services/seedService';
 
 import Header from './components/Header';
@@ -16,26 +17,28 @@ import TaskModal from './components/TaskModal';
 import CalendarView from './components/CalendarView';
 import Settings from './components/Settings';
 import ContactMessages from './components/ContactMessages';
+import RequesterManager from './components/RequesterManager';
 
-type View = 'dashboard' | 'tasks' | 'starred' | 'assignees' | 'calendar' | 'settings' | 'inbox';
+type View = 'dashboard' | 'tasks' | 'starred' | 'assignees' | 'calendar' | 'settings' | 'inbox' | 'requesters';
 
 interface TeamAppProps {
-  onBackToHome: () => void;
+  onLogout: () => void;
   theme: string;
   toggleTheme: () => void;
+  currentUser: TeamMember;
 }
 
 const NavItem: React.FC<{ icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badgeCount?: number }> = ({ icon, label, active, onClick, badgeCount }) => {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ x: 10, scale: 1.1 }}
+      whileHover={{ y: -2, scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 10 }}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
+      transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 interactive-glow ${
         active
-          ? 'bg-brand-primary text-white shadow-md'
-          : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+          ? 'bg-brand-primary text-white shadow-lg dark:bg-dark-accent dark:text-dark-bg'
+          : 'text-gray-600 hover:bg-gray-100 dark:text-dark-text-muted dark:hover:bg-dark-card/50'
       }`}
     >
       <span className="icon-interactive">{icon}</span>
@@ -57,27 +60,41 @@ const NavDropdown: React.FC<{
   icon: React.ReactNode;
   label: string;
   active: boolean;
-  onClick: () => void;
   children: React.ReactNode;
-}> = ({ icon, label, active, onClick, children }) => {
+  onMainClick?: () => void;
+}> = ({ icon, label, active, children, onMainClick }) => {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleToggle = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
+  const handleMainClick = () => {
+    if (onMainClick) {
+      onMainClick();
+    } else {
+      handleToggle();
+    }
+  };
   
   return (
     <div>
       <div
-        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
+        onClick={handleMainClick}
+        className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 cursor-pointer interactive-glow ${
           active
-            ? 'bg-brand-primary text-white shadow-md'
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'bg-brand-primary text-white shadow-md dark:bg-dark-accent dark:text-dark-bg'
+            : 'text-gray-600 hover:bg-gray-100 dark:text-dark-text-muted dark:hover:bg-dark-card/50'
         }`}
       >
-        <button onClick={onClick} className="flex items-center gap-3 flex-grow">
+        <div className="flex items-center gap-3 flex-grow">
           <span className="icon-interactive">{icon}</span>
           <span className="font-medium">{label}</span>
-        </button>
+        </div>
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-1 rounded-full hover:bg-white/20 icon-interactive"
+          onClick={handleToggle}
+          className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/20 icon-interactive"
           aria-expanded={isOpen}
         >
           <FiChevronDown className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -107,8 +124,8 @@ const NavSubItem: React.FC<{ label: string; onClick: () => void; isActive: boole
         whileHover={{ x: 5 }}
         className={`icon-interactive w-full text-left px-4 py-2 text-sm rounded-md transition-colors ${
             isActive 
-            ? 'bg-blue-100 dark:bg-blue-900/50 text-brand-primary font-semibold' 
-            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+            ? 'bg-brand-primary/10 text-brand-primary font-semibold dark:bg-dark-accent/10 dark:text-dark-accent' 
+            : 'text-gray-500 hover:bg-gray-100 dark:text-dark-text-muted dark:hover:bg-dark-card/50'
         }`}
     >
         {label}
@@ -116,7 +133,7 @@ const NavSubItem: React.FC<{ label: string; onClick: () => void; isActive: boole
 );
 
 
-const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onBackToHome: () => void; onSetFilters: (filters: {[key: string]: string}) => void; activeFilters: {[key: string]: string}; unreadMessagesCount: number; onNavItemClicked?: () => void; }> = ({ view, setView, onBackToHome, onSetFilters, activeFilters, unreadMessagesCount, onNavItemClicked }) => {
+const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onLogout: () => void; onSetFilters: (filters: {[key: string]: string}) => void; activeFilters: {[key: string]: string}; unreadMessagesCount: number; onNavItemClicked?: () => void; }> = ({ view, setView, onLogout, onSetFilters, activeFilters, unreadMessagesCount, onNavItemClicked }) => {
     const handleNavClick = (targetView: View) => {
         setView(targetView);
         onNavItemClicked?.();
@@ -132,25 +149,30 @@ const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onBa
             <button 
                 onClick={() => handleNavClick('dashboard')}
                 aria-label="Go to dashboard"
-                className="w-full text-left p-4 border-b border-gray-200 dark:border-gray-700 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="w-full text-left p-4 border-b border-gray-200 dark:border-dark-border transition-colors hover:bg-gray-100 dark:hover:bg-dark-card/50"
             >
                 <div className="flex items-center gap-3">
                     <img 
                         src="https://eservice.tfac.or.th/check_member/assets/images/logo.png" 
                         alt="Logo สภาวิชาชีพบัญชี" 
-                        className="w-12 h-12 object-contain flex-shrink-0"
+                        className="w-12 h-12 object-contain flex-shrink-0 bg-gray-100 dark:bg-white/10 rounded-md p-1"
                     />
                     <div>
-                        <p className="font-bold text-brand-primary leading-tight text-sm">ระบบจัดการงาน</p>
-                        <p className="font-bold text-brand-primary leading-tight text-sm">ส่วนงานสื่อสารองค์กร</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">สภาวิชาชีพบัญชี ในพระบรมราชูปถัมภ์</p>
+                        <p className="font-bold text-brand-primary dark:text-dark-accent leading-tight text-sm">ระบบจัดการงาน</p>
+                        <p className="font-bold text-brand-primary dark:text-dark-accent leading-tight text-sm">ส่วนงานสื่อสารองค์กร</p>
+                        <p className="text-xs text-gray-500 dark:text-dark-text-muted italic mt-1">สภาวิชาชีพบัญชี ในพระบรมราชูปถัมภ์</p>
                     </div>
                 </div>
             </button>
             <nav className="flex-grow p-4 space-y-2">
               <NavItem icon={<FiBarChart2 />} label="Dashboard" active={view === 'dashboard'} onClick={() => { onSetFilters({}); handleNavClick('dashboard'); }} />
               
-              <NavDropdown icon={<FiCheckSquare />} label="รายการงาน" active={view === 'tasks'} onClick={() => { onSetFilters({}); handleNavClick('tasks'); }}>
+              <NavDropdown 
+                icon={<FiCheckSquare />} 
+                label="รายการงาน" 
+                active={view === 'tasks'} 
+                onMainClick={() => { onSetFilters({}); handleNavClick('tasks'); }}
+              >
                 {Object.values(TaskStatus).map(status => (
                   <NavSubItem key={status} label={status} onClick={() => handleFilterClick(status)} isActive={activeFilters.status === status} />
                 ))}
@@ -158,75 +180,71 @@ const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onBa
 
               <NavItem icon={<FiStar />} label="รายการโปรด" active={view === 'starred'} onClick={() => handleNavClick('starred')} />
               <NavItem icon={<FiCalendar />} label="ปฏิทิน" active={view === 'calendar'} onClick={() => handleNavClick('calendar')} />
-              <NavItem icon={<FiUsers />} label="จัดการผู้รับผิดชอบ" active={view === 'assignees'} onClick={() => handleNavClick('assignees')} />
+               <NavDropdown icon={<FiUsers />} label="จัดการบัญชี" active={view === 'assignees' || view === 'requesters'}>
+                  <NavSubItem 
+                    label="ผู้รับผิดชอบ (ทีม)" 
+                    onClick={() => handleNavClick('assignees')}
+                    isActive={view === 'assignees'}
+                  />
+                  <NavSubItem 
+                    label="ผู้สั่งงาน (ทั่วไป)" 
+                    onClick={() => handleNavClick('requesters')}
+                    isActive={view === 'requesters'}
+                  />
+              </NavDropdown>
               <NavItem icon={<FiInbox />} label="กล่องข้อความ" active={view === 'inbox'} onClick={() => handleNavClick('inbox')} badgeCount={unreadMessagesCount} />
               <NavItem icon={<FiSettings />} label="ตั้งค่า" active={view === 'settings'} onClick={() => handleNavClick('settings')} />
             </nav>
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-                <button onClick={onBackToHome} className="icon-interactive w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <FiFilePlus size={18} /> ระบบแจ้งงาน
+            <div className="p-4 border-t border-gray-200 dark:border-dark-border">
+                <button onClick={onLogout} className="icon-interactive w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-800 transition-colors">
+                    <FiLogOut size={18} /> ออกจากระบบ
                 </button>
             </div>
         </>
     );
 };
 
-const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) => {
+const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, currentUser }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [view, setView] = useState<View>('dashboard');
-  const [currentUser, setCurrentUser] = useState<TeamMember | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilters, setActiveFilters] = useState<{[key: string]: string}>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Seed initial data if collections are empty
     seedInitialData().then(() => {
-        // Set up real-time listeners
         const unsubTasks = onTasksUpdate(setTasks);
-        const unsubMembers = onTeamMembersUpdate((members) => {
-            setTeamMembers(members);
-            if (!currentUser && members.length > 0) {
-                setCurrentUser(members[0]);
-            }
-        });
+        const unsubMembers = onTeamMembersUpdate(setTeamMembers);
         const unsubNotifications = onNotificationsUpdate(setNotifications);
         const unsubMessages = onContactMessagesUpdate(setContactMessages);
+        const unsubUsers = onUsersUpdate(setUsers);
         
         setIsLoading(false);
 
-        // Cleanup subscriptions on unmount
         return () => {
             unsubTasks();
             unsubMembers();
             unsubNotifications();
             unsubMessages();
+            unsubUsers();
         };
     });
-  }, [currentUser]);
+  }, []);
   
   const handleUpdateTask = async (updatedTask: Task) => {
     await updateTask(updatedTask);
     setSelectedTask(null);
   };
-
-  const updateTeamMembers = async (updatedMembers: TeamMember[]) => {
-    await saveTeamMembers(updatedMembers);
-  };
-
-  const updateNotifications = async (updated: Notification[]) => {
-    await saveNotifications(updated);
-  };
   
   const updateContactMessages = async (updater: (prevMessages: ContactMessage[]) => ContactMessage[]) => {
-    // This function needs to get current state to apply updater
     setContactMessages(prevMessages => {
         const newMessages = updater(prevMessages);
-        saveContactMessages(newMessages); // async save
+        saveContactMessages(newMessages);
         return newMessages;
     });
   };
@@ -236,22 +254,22 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
     if (taskToOpen) {
       setSelectedTask(taskToOpen);
       const updatedNotifications = notifications.map(n => n.taskId === taskId ? { ...n, isRead: true } : n);
-      saveNotifications(updatedNotifications); // async save
+      saveNotifications(updatedNotifications);
     }
   };
 
   const handleDeleteNotification = (notificationId: string) => {
     const updatedNotifications = notifications.filter(n => n.id !== notificationId);
-    saveNotifications(updatedNotifications); // async save
+    saveNotifications(updatedNotifications);
   };
 
   const handleClearNotifications = () => {
-    saveNotifications([]); // async save
+    saveNotifications([]);
   };
 
   const handleMarkAllAsRead = () => {
     const updatedNotifications = notifications.map(n => ({ ...n, isRead: true }));
-    saveNotifications(updatedNotifications); // async save
+    saveNotifications(updatedNotifications);
   };
 
   const handleSetFilters = (filters: {[key: string]: string}) => {
@@ -267,17 +285,15 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
   
   if (isLoading) {
     return (
-        <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
+        <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-dark-bg">
             <div className="text-center">
-                <p className="text-xl font-semibold text-gray-700 dark:text-gray-200">กำลังเชื่อมต่อฐานข้อมูล...</p>
+                <p className="text-xl font-semibold text-gray-700 dark:text-dark-text">กำลังเชื่อมต่อฐานข้อมูล...</p>
             </div>
         </div>
     );
   }
 
   const renderView = () => {
-    if (!currentUser) return <div className="text-center p-8">กำลังโหลดข้อมูลผู้ใช้...</div>;
-    
     switch (view) {
       case 'dashboard':
         return <OverviewDashboard 
@@ -310,7 +326,18 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
                   onSelectTask={setSelectedTask}
                 />;
       case 'assignees':
-        return <AssigneeManager teamMembers={teamMembers} updateTeamMembers={updateTeamMembers} />;
+        return <AssigneeManager 
+                  teamMembers={teamMembers} 
+                  addTeamMember={addTeamMember}
+                  updateTeamMember={updateTeamMember}
+                  deleteTeamMember={deleteTeamMember}
+                />;
+       case 'requesters':
+        return <RequesterManager 
+                  users={users}
+                  updateUser={updateUserService}
+                  deleteUser={deleteUserService}
+                />;
       case 'inbox':
         return <ContactMessages messages={contactMessages} updateMessages={updateContactMessages} />;
       case 'settings':
@@ -327,14 +354,12 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
-      className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+      className="flex h-screen bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-dark-text"
     >
-      {/* Desktop Sidebar */}
-      <aside className="w-72 bg-white dark:bg-gray-800 shadow-lg flex-col hidden md:flex">
-         <SidebarContent view={view} setView={setView} onBackToHome={onBackToHome} onSetFilters={handleSetFilters} activeFilters={activeFilters} unreadMessagesCount={unreadMessagesCount} />
+      <aside className="w-72 bg-white dark:bg-dark-card shadow-lg flex-col hidden md:flex border-r border-gray-200 dark:border-dark-border">
+         <SidebarContent view={view} setView={setView} onLogout={onLogout} onSetFilters={handleSetFilters} activeFilters={activeFilters} unreadMessagesCount={unreadMessagesCount} />
       </aside>
 
-      {/* Mobile Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>
@@ -351,12 +376,12 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-gray-800 shadow-lg flex flex-col z-40 md:hidden"
+              className="fixed inset-y-0 left-0 w-72 bg-white dark:bg-dark-card shadow-lg flex flex-col z-40 md:hidden border-r border-gray-200 dark:border-dark-border"
             >
               <SidebarContent 
                 view={view} 
                 setView={setView} 
-                onBackToHome={onBackToHome} 
+                onLogout={onLogout} 
                 onSetFilters={handleSetFilters}
                 activeFilters={activeFilters}
                 unreadMessagesCount={unreadMessagesCount}
@@ -367,15 +392,11 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
         )}
       </AnimatePresence>
 
-
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           theme={theme} 
           toggleTheme={toggleTheme} 
           currentUser={currentUser}
-          teamMembers={teamMembers}
-          setCurrentUser={setCurrentUser}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           notifications={notifications}
           onNotificationClick={handleNotificationClick}
@@ -383,7 +404,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
           onClearNotifications={handleClearNotifications}
           onMarkAllRead={handleMarkAllAsRead}
         />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-900/50">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-dark-bg">
             <AnimatePresence mode="wait">
                 <motion.div
                     key={view}
@@ -399,7 +420,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onBackToHome, theme, toggleTheme }) =
       </div>
 
       <AnimatePresence>
-        {selectedTask && currentUser && (
+        {selectedTask && (
           <TaskModal
             task={selectedTask}
             teamMembers={teamMembers}

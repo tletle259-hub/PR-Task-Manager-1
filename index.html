@@ -20,6 +20,14 @@
             colors: {
               'brand-primary': '#2563eb',
               'brand-secondary': '#f97316',
+               // New Dark Theme Palette
+              'dark-bg': '#0F172A', // slate-900
+              'dark-card': '#1E293B', // slate-800
+              'dark-muted': '#334155', // slate-700
+              'dark-text': '#E2E8F0', // slate-200
+              'dark-text-muted': '#94A3B8', // slate-400
+              'dark-accent': '#22D3EE', // cyan-400
+              'dark-border': '#334155',
             },
           },
         },
@@ -29,10 +37,13 @@
       body {
         font-family: 'Anuphan', 'sans-serif';
       }
+      .dark body {
+        background-color: #0F172A; /* dark-bg */
+        color: #E2E8F0; /* dark-text */
+      }
       .icon-interactive {
         position: relative;
         overflow: hidden;
-        /* Ensures the container fits the icon */
         display: inline-flex;
         justify-content: center;
         align-items: center;
@@ -40,7 +51,7 @@
       .icon-interactive > svg, .icon-interactive > * > svg {
         transition: transform 0.2s ease-in-out;
         position: relative;
-        z-index: 1; /* Keep icon above the shine effect */
+        z-index: 1;
       }
       .icon-interactive:hover > svg, .icon-interactive:hover > * > svg {
         transform: scale(1.15);
@@ -56,31 +67,57 @@
         pointer-events: none;
       }
       .dark .icon-interactive::after {
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+          background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.4), transparent);
       }
       .icon-interactive:hover::after {
           transform: translateX(100%);
           transition: transform 0.8s cubic-bezier(0.23, 1, 0.32, 1);
       }
 
-      /* --- New Shimmer Card Style --- */
-      .shimmer-card {
+      /* --- New Dynamic Glow Effect (Theme Aware) --- */
+      .interactive-glow {
         position: relative;
         overflow: hidden;
+        z-index: 1; /* Ensure content is above the glow */
       }
-      .shimmer-card::before {
+      .interactive-glow::before {
         content: '';
         position: absolute;
         inset: 0;
-        border-radius: 1rem; /* matches rounded-2xl */
-        background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.3), transparent 40%);
-        z-index: 0;
+        border-radius: inherit;
+        /* Light Mode Glow (brand-primary) */
+        background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(37, 99, 235, 0.15), transparent 80%);
+        z-index: -1;
         opacity: 0;
-        transition: opacity 0.3s;
+        transition: opacity 0.2s ease-out;
         pointer-events: none;
       }
-      .shimmer-card:hover::before {
+      .dark .interactive-glow::before {
+         /* Dark Mode Glow (dark-accent) */
+        background: radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(34, 211, 238, 0.2), transparent 80%);
+      }
+      .interactive-glow:hover::before {
         opacity: 1;
+      }
+
+      /* --- Login Page BG Style (existing) --- */
+      .login-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background-color: #f3f4f6;
+        background-image:
+          radial-gradient(at 47% 33%, hsl(210.00, 75%, 95%) 0px, transparent 50%),
+          radial-gradient(at 9% 62%, hsl(240.00, 75%, 95%) 0px, transparent 50%),
+          radial-gradient(at 82% 65%, hsl(270.00, 75%, 95%) 0px, transparent 50%);
+      }
+      .dark .login-container {
+        background-color: #111827;
+         background-image:
+          radial-gradient(at 47% 33%, hsl(210.00, 75%, 15%) 0px, transparent 50%),
+          radial-gradient(at 9% 62%, hsl(240.00, 75%, 15%) 0px, transparent 50%),
+          radial-gradient(at 82% 65%, hsl(270.00, 75%, 15%) 0px, transparent 50%);
       }
     </style>
   <script type="importmap">
@@ -94,14 +131,29 @@
     "recharts": "https://aistudiocdn.com/recharts@^3.2.1",
     "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/",
     "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+    "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
     "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/"
+    "firebase/": "https://aistudiocdn.com/firebase@^12.4.0/",
+    "@azure/msal-browser": "https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.17.0/+esm"
   }
 }
 </script>
 </head>
-  <body class="bg-gray-50 dark:bg-gray-900">
+  <body class="bg-gray-50 dark:bg-dark-bg">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // JavaScript for Dynamic Glow Effect
+      document.body.addEventListener('mousemove', e => {
+        const glowElement = e.target.closest('.interactive-glow');
+        if (glowElement) {
+          const rect = glowElement.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          glowElement.style.setProperty('--mouse-x', `${x}px`);
+          glowElement.style.setProperty('--mouse-y', `${y}px`);
+        }
+      });
+    </script>
   </body>
 </html>

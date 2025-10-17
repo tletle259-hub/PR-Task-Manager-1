@@ -1,14 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
-// ==========================================================================================
-// TODO: REPLACE WITH YOUR FIREBASE PROJECT CONFIGURATION
-// 1. Go to your Firebase project settings.
-// 2. In the "General" tab, scroll down to "Your apps".
-// 3. Click the "Web" app icon (</>).
-// 4. Under "Firebase SDK snippet", select the "Config" option.
-// 5. Copy the firebaseConfig object and paste it here.
-// ==========================================================================================
 const firebaseConfig = {
   apiKey: "AIzaSyA8qWbPzDF3MC7ETKMAs8w-1Wycg3EwaA4",
   authDomain: "pr-taskmanager.firebaseapp.com",
@@ -19,13 +12,7 @@ const firebaseConfig = {
   measurementId: "G-TRFHW3C1DR"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
-
-// IMPORTANT: For production, you MUST configure Firestore Security Rules
-// to prevent unauthorized access to your data.
-// Start with test rules, but secure your data before going live.
-// Go to Firestore Database > Rules in the Firebase console.
+export const auth = getAuth(app);

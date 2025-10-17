@@ -1,4 +1,4 @@
-import { collection, onSnapshot, writeBatch, doc, getDocs, addDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, doc, getDocs, addDoc, deleteDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { CalendarEvent } from '../types';
 import { MOCK_HOLIDAYS } from '../constants';
@@ -27,8 +27,9 @@ export const seedInitialCalendarEvents = async () => {
     }
 };
 
+// Fix: Explicitly type the snapshot parameter as QuerySnapshot<DocumentData> to resolve the type error.
 export const onCalendarEventsUpdate = (callback: (events: CalendarEvent[]) => void): (() => void) => {
-    return onSnapshot(eventsCollectionRef, (snapshot) => {
+    return onSnapshot(eventsCollectionRef, (snapshot: QuerySnapshot<DocumentData>) => {
         const events: CalendarEvent[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CalendarEvent));
         callback(events);
     });
