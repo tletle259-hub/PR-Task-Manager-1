@@ -147,7 +147,7 @@ const SidebarContent: React.FC<{
             </div>
             <div className="flex-grow p-4 space-y-2">
                 <NavItem icon={<FiFilePlus />} label="แจ้งงานใหม่" active={view === 'form'} onClick={() => handleNavClick('form')} />
-                <NavItem icon={<FiList />} label="ติดตามสถานะงาน" active={view === 'requests'} onClick={() => handleNavClick('requests')} />
+                <NavItem icon={<FiList />} label="งานที่สั่งแล้ว" active={view === 'requests'} onClick={() => handleNavClick('requests')} />
                 <NavItem icon={<FiSettings />} label="ตั้งค่าโปรไฟล์" active={view === 'settings'} onClick={() => handleNavClick('settings')} />
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">

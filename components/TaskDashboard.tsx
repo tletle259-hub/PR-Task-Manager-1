@@ -1,8 +1,6 @@
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiLayout } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType } from '../types';
 import { TASK_STATUS_COLORS, TASK_TYPE_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
@@ -259,7 +257,9 @@ const FilterSection: React.FC<{title: string; children: React.ReactNode}> = ({ti
 );
 
 
-// --- ORIGINAL COMPONENTS ---
+// --- TASK VIEW COMPONENTS ---
+
+type ViewMode = 'card' | 'list' | 'column';
 
 interface TaskDashboardProps {
   tasks: Task[];
@@ -270,29 +270,17 @@ interface TaskDashboardProps {
   onSelectTask: (task: Task) => void;
 }
 
-interface TaskCardProps {
-  task: Task;
-  teamMembers: TeamMember[];
-  onEdit: () => void;
-  onToggleStar: () => void;
-  onDelete: () => void;
-}
-
-const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggleStar, onDelete }) => {
+const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; isCompact?: boolean; }> = ({ task, teamMembers, onSelectTask, onToggleStar, onDelete, isCompact = false }) => {
     const assignee = teamMembers.find(m => m.id === task.assigneeId);
     const { bg, text, border } = TASK_TYPE_COLORS[task.taskType] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-400' };
     
     return (
         <motion.div
-            layout
+            layout="position"
             initial={{ opacity: 0, y: 50, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
-            whileHover={{ 
-                y: -12, 
-                scale: 1.05, 
-                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' 
-            }}
+            whileHover={!isCompact ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
             className={`bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden border-t-4 ${border} interactive-glow`}
         >
@@ -301,7 +289,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
                     <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${bg} ${text}`}>{task.taskType}</span>
-                        <div className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>{task.status}</div>
+                        {!isCompact && <div className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>{task.status}</div>}
                     </div>
                 </div>
                 
@@ -315,18 +303,18 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
                 )}
                 
                 <h3 className="font-bold text-lg mt-1 truncate">{task.taskTitle}</h3>
-                <p className="text-sm text-gray-500 dark:text-dark-text-muted h-10 overflow-hidden text-ellipsis">{task.taskDescription}</p>
-                 <div className="mt-3 text-xs text-gray-500 dark:text-dark-text-muted">
+                {!isCompact && <p className="text-sm text-gray-500 dark:text-dark-text-muted h-10 overflow-hidden text-ellipsis">{task.taskDescription}</p>}
+                <div className="mt-3 text-xs text-gray-500 dark:text-dark-text-muted">
                     <p><strong>ผู้ขอ:</strong> {task.requesterName} ({task.department})</p>
                 </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-dark-border p-5 bg-gray-50 dark:bg-dark-card/50">
+            <div className={`mt-4 pt-4 border-t border-gray-100 dark:border-dark-border p-5 ${isCompact ? 'bg-white dark:bg-dark-card' : 'bg-gray-50 dark:bg-dark-card/50'}`}>
                 <div className="flex justify-between items-end text-sm">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-gray-500 dark:text-dark-text-muted text-xs">
+                     <div className="space-y-1">
+                        {!isCompact && <div className="flex items-center gap-2 text-gray-500 dark:text-dark-text-muted text-xs">
                             <FiCalendar size={14} />
                             <span>วันที่สั่ง: {new Date(task.timestamp).toLocaleDateString('th-TH')}</span>
-                        </div>
+                        </div>}
                         <div className="flex items-center gap-2 text-red-500 font-medium">
                             <FiCalendar size={14} />
                             <span>กำหนดส่ง: {new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
@@ -353,7 +341,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
                         <FiStar className={`${task.isStarred ? 'fill-current' : ''}`}/>
                     </button>
                     <div className="flex gap-2">
-                        <button onClick={onEdit} className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+                        <button onClick={() => onSelectTask(task)} className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
                             <FiEdit3 size={14} /> แก้ไข
                         </button>
                         <button onClick={onDelete} className="icon-interactive flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors">
@@ -366,6 +354,69 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
     );
 };
 
+const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; }> = ({ task, teamMembers, onSelectTask, onToggleStar, onDelete }) => {
+    const assignee = teamMembers.find(m => m.id === task.assigneeId);
+    const { bg, text } = TASK_TYPE_COLORS[task.taskType] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+
+    return (
+         <motion.div
+            layout="position"
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 50 }}
+            className="bg-white dark:bg-dark-card rounded-lg shadow p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+        >
+            <div className="flex items-center gap-3 flex-grow min-w-0">
+                 <button onClick={onToggleStar} aria-label="Toggle star" className={`icon-interactive flex-shrink-0 p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500' : 'text-gray-400 dark:text-dark-text-muted hover:text-yellow-500'}`}>
+                    <FiStar size={20} className={`${task.isStarred ? 'fill-current' : ''}`}/>
+                </button>
+                 <div className="min-w-0 flex-grow">
+                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">{task.id}</p>
+                    <p className="font-bold truncate text-gray-800 dark:text-dark-text">{task.taskTitle}</p>
+                    {task.projectName && (
+                        <div className="mt-1">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium text-purple-700 bg-purple-100 dark:text-purple-200 dark:bg-purple-900/50 rounded-md">
+                                <FiBriefcase size={12} />
+                                {task.projectName}
+                            </span>
+                        </div>
+                    )}
+                 </div>
+            </div>
+             <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-6 gap-y-2 text-sm w-full sm:w-auto sm:justify-end">
+                 <div className={`px-2 py-1 text-xs font-semibold rounded-full ${bg} ${text}`}>{task.taskType}</div>
+                 
+                 <div className="flex items-center gap-2 w-32">
+                     {assignee ? (
+                           <>
+                               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getColorForString(assignee.id)} flex-shrink-0`}>
+                                   <FiUser size={14} className="text-white" />
+                               </div>
+                               <span className="text-gray-800 dark:text-dark-text truncate">{assignee.name}</span>
+                           </>
+                        ) : (
+                           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-muted">
+                               <FiUser size={14} />
+                               <span>ยังไม่มอบหมาย</span>
+                           </div>
+                        )}
+                 </div>
+
+                 <div className={`px-2 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} w-24 text-center`}>{task.status}</div>
+                 
+                 <div className="text-red-500 font-medium w-28 text-left sm:text-right">
+                    <span>{new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
+                </div>
+
+                <div className="flex gap-2">
+                    <button onClick={() => onSelectTask(task)} className="icon-interactive p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit3 /></button>
+                    <button onClick={onDelete} className="icon-interactive p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
+                </div>
+            </div>
+         </motion.div>
+    );
+};
+
 const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState(initialFilterState);
@@ -373,6 +424,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
   const [sort, setSort] = useState('newest');
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
 
   useEffect(() => {
     if (initialFilters && Object.keys(initialFilters).length > 0) {
@@ -490,6 +542,79 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
 
 
   const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.assignee !== 'all' || dateFilter.period !== 'all';
+  
+  const renderTasks = () => {
+      if (filteredAndSortedTasks.length === 0) {
+          return <div className="text-center py-12 text-gray-500 dark:text-dark-text-muted"><p>ไม่พบงานที่ตรงกับเงื่อนไข</p></div>;
+      }
+
+      switch(viewMode) {
+          case 'list':
+              return (
+                  <div className="space-y-3">
+                    {filteredAndSortedTasks.map(task => (
+                        <TaskListItem
+                            key={task.id}
+                            task={task}
+                            teamMembers={teamMembers}
+                            onSelectTask={onSelectTask}
+                            onToggleStar={() => handleToggleStar(task.id)}
+                            onDelete={() => setTaskToDelete(task)}
+                        />
+                    ))}
+                  </div>
+              );
+
+          case 'column':
+               const columnOrder: TaskStatus[] = [TaskStatus.NOT_STARTED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED];
+               const tasksByStatus = columnOrder.reduce((acc, status) => {
+                   acc[status] = filteredAndSortedTasks.filter(t => t.status === status);
+                   return acc;
+               }, {} as Record<TaskStatus, Task[]>);
+
+              return (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                    {columnOrder.map(status => (
+                        <div key={status} className="bg-gray-100 dark:bg-dark-bg rounded-lg p-3">
+                            <h3 className="font-bold text-center mb-3 p-2 rounded-md text-white" style={{ backgroundColor: TASK_STATUS_COLORS[status].replace('bg-', '').split('-')[0] }}>
+                                {status} ({tasksByStatus[status].length})
+                            </h3>
+                            <div className="space-y-3 h-[calc(100vh-20rem)] overflow-y-auto p-1">
+                                {tasksByStatus[status].map(task => (
+                                    <TaskCard
+                                        key={task.id}
+                                        task={task}
+                                        teamMembers={teamMembers}
+                                        onSelectTask={onSelectTask}
+                                        onToggleStar={() => handleToggleStar(task.id)}
+                                        onDelete={() => setTaskToDelete(task)}
+                                        isCompact={true}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                  </div>
+              );
+              
+          case 'card':
+          default:
+              return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {filteredAndSortedTasks.map(task => (
+                        <TaskCard 
+                          key={task.id} 
+                          task={task} 
+                          teamMembers={teamMembers} 
+                          onSelectTask={onSelectTask}
+                          onToggleStar={() => handleToggleStar(task.id)}
+                          onDelete={() => setTaskToDelete(task)}
+                        />
+                      ))}
+                  </div>
+              );
+      }
+  };
 
   return (
     <div>
@@ -514,6 +639,15 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
             <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ, ชื่อโปรเจกต์..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
           </div>
            <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="p-1 bg-gray-200 dark:bg-dark-bg rounded-lg flex items-center">
+                    {(['card', 'list', 'column'] as ViewMode[]).map(mode => (
+                        <button key={mode} onClick={() => setViewMode(mode)} className={`p-2 rounded-md transition-colors ${viewMode === mode ? 'bg-white dark:bg-dark-muted shadow' : 'text-gray-500 dark:text-dark-text-muted hover:bg-white/50 dark:hover:bg-dark-muted/50'}`}>
+                           {mode === 'card' && <FiGrid />}
+                           {mode === 'list' && <FiList />}
+                           {mode === 'column' && <FiLayout />}
+                        </button>
+                    ))}
+                </div>
                 <button onClick={() => setIsFilterPanelOpen(true)} className="icon-interactive flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border">
                     <FiFilter />
                     ตัวกรอง
@@ -572,27 +706,17 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         </AnimatePresence>
       </div>
 
-      <AnimatePresence>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredAndSortedTasks.map(task => (
-            <TaskCard 
-              key={task.id} 
-              task={task} 
-              teamMembers={teamMembers} 
-              onEdit={() => onSelectTask(task)}
-              onToggleStar={() => handleToggleStar(task.id)}
-              onDelete={() => setTaskToDelete(task)}
-            />
-          ))}
-        </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+            key={viewMode}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+        >
+            {renderTasks()}
+        </motion.div>
       </AnimatePresence>
       
-      {filteredAndSortedTasks.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-dark-text-muted">
-            <p>ไม่พบงานที่ตรงกับเงื่อนไข</p>
-        </div>
-      )}
-
       <FilterPanel 
         isOpen={isFilterPanelOpen}
         onClose={() => setIsFilterPanelOpen(false)}
