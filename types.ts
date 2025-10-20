@@ -100,6 +100,7 @@ export enum NotificationType {
   NEW_ASSIGNMENT = 'มอบหมายงานใหม่',
   DUE_SOON = 'งานใกล้ถึงกำหนด',
   STATUS_UPDATE = 'สถานะงานเปลี่ยนแปลง',
+  NEW_TASK = 'มีงานใหม่เข้ามา',
 }
 
 export interface Notification {

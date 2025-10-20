@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut } from 'react-icons/fi';
+import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut, FiAlertTriangle } from 'react-icons/fi';
 import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage, NotificationType } from './types';
 import { onTasksUpdate, updateTask } from './services/taskService';
 import { onTeamMembersUpdate, addTeamMember, updateTeamMember, deleteTeamMember } from './services/secureIdService';
@@ -27,6 +27,81 @@ interface TeamAppProps {
   toggleTheme: () => void;
   currentUser: TeamMember;
 }
+
+// --- CONFIRMATION MODAL COMPONENT ---
+interface ConfirmationModalProps {
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: React.ReactNode;
+  confirmText?: string;
+  cancelText?: string;
+}
+
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = 'ยืนยัน',
+  cancelText = 'ยกเลิก',
+}) => {
+  return (
+    <motion.div
+      key="confirm-modal-backdrop"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        key="confirm-modal-panel"
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 50, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="bg-white dark:bg-dark-card rounded-2xl shadow-xl w-full max-w-md border border-gray-200 dark:border-dark-border"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="flex items-start gap-4">
+            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/50 sm:mx-0 sm:h-10 sm:w-10">
+              <FiAlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
+            </div>
+            <div className="mt-0 text-left flex-grow">
+              <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-dark-text" id="modal-title">
+                {title}
+              </h3>
+              <div className="mt-2">
+                <p className="text-sm text-gray-500 dark:text-dark-text-muted">
+                  {message}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <footer className="px-6 py-4 bg-gray-50 dark:bg-dark-card/50 flex flex-row-reverse gap-3 rounded-b-2xl">
+          <button
+            type="button"
+            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+            onClick={onConfirm}
+          >
+            {confirmText}
+          </button>
+          <button
+            type="button"
+            className="w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-dark-border shadow-sm px-4 py-2 bg-white dark:bg-dark-muted text-base font-medium text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-dark-border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary dark:focus:ring-dark-accent sm:mt-0 sm:w-auto sm:text-sm transition-colors"
+            onClick={onClose}
+          >
+            {cancelText}
+          </button>
+        </footer>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const NavItem: React.FC<{ icon: React.ReactNode; label: string; active: boolean; onClick: () => void; badgeCount?: number }> = ({ icon, label, active, onClick, badgeCount }) => {
   return (
@@ -215,25 +290,88 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
   const [activeFilters, setActiveFilters] = useState<{[key: string]: string}>({});
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
+  const isInitialTasksSet = useRef(false);
 
+  const playNotificationSound = () => {
+    const soundEnabled = localStorage.getItem('notificationSoundEnabled') !== 'false';
+    if (!soundEnabled) return;
+
+    try {
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        
+        const playTone = (freq: number, startTime: number, duration: number) => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freq, startTime);
+            gainNode.gain.setValueAtTime(0.3, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+            
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        }
+
+        const now = audioContext.currentTime;
+        playTone(880, now, 0.15); // A5
+        playTone(1046.50, now + 0.15, 0.15); // C6
+
+    } catch(e) {
+        console.error("Could not play notification sound:", e);
+    }
+  };
+
+  // Fix: Combined and corrected the two useEffect hooks into one.
+  // This resolves multiple compilation errors related to incorrect hook structure,
+  // dependency arrays, and variable scoping for cleanup functions.
   useEffect(() => {
+    let unsubTasks: () => void;
+    let unsubMembers: () => void;
+    let unsubNotifications: () => void;
+    let unsubMessages: () => void;
+    let unsubUsers: () => void;
+
     seedInitialData().then(() => {
-        const unsubTasks = onTasksUpdate(setTasks);
-        const unsubMembers = onTeamMembersUpdate(setTeamMembers);
-        const unsubNotifications = onNotificationsUpdate(setNotifications);
-        const unsubMessages = onContactMessagesUpdate(setContactMessages);
-        const unsubUsers = onUsersUpdate(setUsers);
+        unsubTasks = onTasksUpdate(newTasks => {
+            setTasks(prevTasks => {
+                if (!isInitialTasksSet.current) {
+                    isInitialTasksSet.current = true;
+                } else if (newTasks.length > prevTasks.length) {
+                    const oldTaskIds = new Set(prevTasks.map(t => t.id));
+                    const addedTasks = newTasks.filter(t => !oldTaskIds.has(t.id));
+
+                    if (addedTasks.length > 0) {
+                        addedTasks.forEach(newTask => {
+                            addNotification({
+                                type: NotificationType.NEW_TASK,
+                                message: `มีงานใหม่เข้ามา: "${newTask.taskTitle}"`,
+                                taskId: newTask.id,
+                            });
+                        });
+                        playNotificationSound();
+                    }
+                }
+                return newTasks;
+            });
+        });
+        unsubMembers = onTeamMembersUpdate(setTeamMembers);
+        unsubNotifications = onNotificationsUpdate(setNotifications);
+        unsubMessages = onContactMessagesUpdate(setContactMessages);
+        unsubUsers = onUsersUpdate(setUsers);
         
         setIsLoading(false);
-
-        return () => {
-            unsubTasks();
-            unsubMembers();
-            unsubNotifications();
-            unsubMessages();
-            unsubUsers();
-        };
     });
+
+    return () => {
+        if (unsubTasks) unsubTasks();
+        if (unsubMembers) unsubMembers();
+        if (unsubNotifications) unsubNotifications();
+        if (unsubMessages) unsubMessages();
+        if (unsubUsers) unsubUsers();
+    };
   }, []);
   
   // Effect for generating "due soon" notifications
@@ -414,7 +552,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
       className="flex h-screen bg-gray-100 dark:bg-dark-bg text-gray-900 dark:text-dark-text"
     >
       <aside className="w-72 bg-white dark:bg-dark-card shadow-lg flex-col hidden md:flex border-r border-gray-200 dark:border-dark-border">
-         <SidebarContent view={view} setView={setView} onLogout={onLogout} onSetFilters={handleSetFilters} activeFilters={activeFilters} unreadMessagesCount={unreadMessagesCount} />
+         <SidebarContent view={view} setView={setView} onLogout={() => setIsLogoutConfirmVisible(true)} onSetFilters={handleSetFilters} activeFilters={activeFilters} unreadMessagesCount={unreadMessagesCount} />
       </aside>
 
       <AnimatePresence>
@@ -438,7 +576,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
               <SidebarContent 
                 view={view} 
                 setView={setView} 
-                onLogout={onLogout} 
+                onLogout={() => setIsLogoutConfirmVisible(true)} 
                 onSetFilters={handleSetFilters}
                 activeFilters={activeFilters}
                 unreadMessagesCount={unreadMessagesCount}
@@ -484,6 +622,19 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
             onClose={() => setSelectedTask(null)}
             onSave={handleUpdateTask}
             currentUser={currentUser}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isLogoutConfirmVisible && (
+          <ConfirmationModal
+            onClose={() => setIsLogoutConfirmVisible(false)}
+            onConfirm={onLogout}
+            title="ยืนยันการออกจากระบบ"
+            message="คุณต้องการออกจากระบบใช่หรือไม่?"
+            confirmText="ออกจากระบบ"
+            cancelText="ยกเลิก"
           />
         )}
       </AnimatePresence>

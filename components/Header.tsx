@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FiSun, FiMoon, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiUser } from 'react-icons/fi';
+import { FiSun, FiMoon, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiUser, FiInbox } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamMember, Notification, NotificationType } from '../types';
 
@@ -15,6 +15,7 @@ const NotificationPanel: React.FC<NotificationPanelProps> = ({ notifications, on
     
     const getIconForType = (type: NotificationType) => {
         switch (type) {
+            case NotificationType.NEW_TASK: return <FiInbox className="text-purple-500" />;
             case NotificationType.NEW_ASSIGNMENT: return <FiUserPlus className="text-blue-500" />;
             case NotificationType.DUE_SOON: return <FiClock className="text-yellow-500" />;
             case NotificationType.STATUS_UPDATE: return <FiCheckCircle className="text-green-500" />;

@@ -146,10 +146,13 @@
       /* Fix for date picker icon color in dark/light modes */
       input[type="date"]::-webkit-calendar-picker-indicator {
           cursor: pointer;
-          filter: invert(var(--dark-mode-invert, 0));
+          /* Assumes default icon is light-colored.
+             - Light mode (fallback): invert(1) -> dark icon.
+             - Dark mode (variable): invert(0) -> light icon. */
+          filter: invert(var(--dark-mode-invert, 1));
       }
       .dark {
-          --dark-mode-invert: 1;
+          --dark-mode-invert: 0;
       }
     </style>
   <script type="importmap">
