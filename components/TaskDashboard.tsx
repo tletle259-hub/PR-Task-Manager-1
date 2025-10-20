@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType } from '../types';
 import { TASK_STATUS_COLORS, TASK_TYPE_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
@@ -305,6 +305,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
                     </div>
                 </div>
                 
+                 {task.projectName && (
+                    <div className="mb-2">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 dark:text-purple-200 dark:bg-purple-900/50 rounded-md">
+                            <FiBriefcase size={12} />
+                            {task.projectName}
+                        </span>
+                    </div>
+                )}
+                
                 <h3 className="font-bold text-lg mt-1 truncate">{task.taskTitle}</h3>
                 <p className="text-sm text-gray-500 dark:text-dark-text-muted h-10 overflow-hidden text-ellipsis">{task.taskDescription}</p>
                  <div className="mt-3 text-xs text-gray-500 dark:text-dark-text-muted">
@@ -391,7 +400,8 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
       filtered = filtered.filter(t => 
         t.taskTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.requesterName.toLowerCase().includes(searchTerm.toLowerCase())
+        t.requesterName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (t.projectName && t.projectName.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
     
@@ -501,7 +511,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-grow">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
-            <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
+            <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ, ชื่อโปรเจกต์..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
           </div>
            <div className="flex items-center gap-2 flex-shrink-0">
                 <button onClick={() => setIsFilterPanelOpen(true)} className="icon-interactive flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border">

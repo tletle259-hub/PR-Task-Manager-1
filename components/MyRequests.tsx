@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiClock, FiCalendar } from 'react-icons/fi';
+import { FiFileText, FiClock, FiCalendar, FiBriefcase } from 'react-icons/fi';
 import { Task, TaskStatus } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 
@@ -16,7 +16,8 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
   
   useEffect(() => {
     if (userEmail) {
-      const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === userEmail.toLowerCase());
+      const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === userEmail.toLowerCase())
+                           .sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setUserTasks(filtered);
     }
   }, [tasks, userEmail]);
@@ -57,9 +58,15 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
                 <div className="flex justify-between items-start">
                 <div>
                     <span className="font-bold text-gray-500 dark:text-gray-400 text-sm">{task.id}</span>
+                     {task.projectName && (
+                        <span className="ml-2 inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-purple-700 bg-purple-100 dark:text-purple-200 dark:bg-purple-900/50 rounded-md">
+                            <FiBriefcase size={12} />
+                            {task.projectName}
+                        </span>
+                    )}
                     <h3 className="text-xl font-bold mt-1 text-brand-secondary">{task.taskTitle}</h3>
                 </div>
-                <div className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} text-center`}>
+                <div className={`px-3 py-1 text-sm font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} text-center flex-shrink-0`}>
                     {task.status}
                 </div>
                 </div>

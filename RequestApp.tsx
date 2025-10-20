@@ -172,8 +172,14 @@ const RequestApp: React.FC<RequestAppProps> = ({ currentUser, onLogout, theme, t
     return () => unsubscribe();
   }, []);
 
-  const handleTaskAdded = async (newTask: Task) => {
-    await addTask(newTask);
+  const handleTaskAdded = async (tasksToAdd: Task | Task[]) => {
+    if (Array.isArray(tasksToAdd)) {
+        for (const task of tasksToAdd) {
+            await addTask(task);
+        }
+    } else {
+        await addTask(tasksToAdd);
+    }
     setShowSuccess(true);
     setTimeout(() => {
         setShowSuccess(false);
@@ -289,6 +295,9 @@ const RequestApp: React.FC<RequestAppProps> = ({ currentUser, onLogout, theme, t
                     {renderView()}
                 </motion.div>
             </AnimatePresence>
+            <footer className="text-center mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400">
+                <p>© 2025 PR Task Manager Dev by Nattakit Chotikorn</p>
+            </footer>
         </main>
       </div>
        <ContactWidget />

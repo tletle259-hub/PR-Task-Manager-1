@@ -126,6 +126,10 @@ const HomePage: React.FC<HomePageProps> = ({
             </motion.div>
 
         </motion.div>
+        <footer className="absolute bottom-4 text-center text-xs text-gray-500 dark:text-gray-400 w-full">
+            <p>© 2025 PR Task Manager</p>
+            <p>Dev by Nattakit Chotikorn</p>
+        </footer>
       </motion.div>
     </>
   );

@@ -612,6 +612,9 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
                 </motion.div>
             </AnimatePresence>
         </main>
+        <footer className="flex-shrink-0 p-2 text-center text-xs text-gray-500 bg-white dark:bg-dark-card border-t border-gray-200 dark:border-dark-border dark:text-dark-text-muted">
+            <p>© 2025 PR Task Manager Dev by Nattakit Chotikorn</p>
+        </footer>
       </div>
 
       <AnimatePresence>
@@ -622,6 +625,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
             onClose={() => setSelectedTask(null)}
             onSave={handleUpdateTask}
             currentUser={currentUser}
+            onSelectTask={setSelectedTask}
           />
         )}
       </AnimatePresence>

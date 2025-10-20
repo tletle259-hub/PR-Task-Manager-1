@@ -1,15 +1,26 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiUploadCloud, FiPaperclip, FiX, FiCalendar } from 'react-icons/fi';
+import { FiUploadCloud, FiPaperclip, FiX, FiCalendar, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { Task, TaskType, TaskStatus, Attachment, User } from '../types';
 import { GOOGLE_DRIVE_UPLOAD_URL } from '../config';
 import { RequesterProfile } from '../App';
-import { AccountInfo } from '@azure/msal-browser';
+import { v4 as uuidv4 } from 'uuid';
+
 
 interface RequestFormProps {
-  onTaskAdded: (task: Task) => void;
+  onTaskAdded: (task: Task | Task[]) => void;
   tasks: Task[];
   user: RequesterProfile;
+}
+
+// SubTask interface for project form
+interface SubTask {
+  id: string;
+  taskType: TaskType;
+  otherTaskTypeName: string;
+  taskTitle: string;
+  taskDescription: string;
+  dueDate: string;
 }
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -26,7 +37,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) => {
   const [formData, setFormData] = useState({
-    requestType: 'new' as 'new' | 'edit' | 'other',
+    requestType: 'new' as 'new' | 'edit' | 'other' | 'project',
     requestDate: new Date().toISOString(),
     dueDate: '',
     requesterName: '',
@@ -39,8 +50,15 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
     taskTitle: '',
     taskDescription: '',
     additionalNotes: '',
-    position: '', // Added position to form state
+    position: '', 
   });
+
+  // State for Project-based tasks
+  const [projectName, setProjectName] = useState('');
+  const [subTasks, setSubTasks] = useState<SubTask[]>([
+      { id: uuidv4(), taskType: TaskType.OTHER, otherTaskTypeName: '', taskTitle: '', taskDescription: '', dueDate: '' }
+  ]);
+
 
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -73,30 +91,39 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
     }
   }, [user]);
 
-  const validate = (data = formData) => {
-    const errors: { [key: string]: string } = {};
+  const validate = () => {
+    const newErrors: { [key: string]: string } = {};
 
-    if (!data.dueDate) {
-        errors.dueDate = 'กรุณาเลือกวันที่ต้องการรับงาน';
+    if (!formData.requesterName.trim()) newErrors.requesterName = 'กรุณากรอกชื่อ-สกุล';
+    if (!formData.department.trim()) newErrors.department = 'กรุณากรอกสังกัดฝ่าย/ส่วน';
+    if (!formData.phone.trim()) newErrors.phone = 'กรุณากรอกเบอร์โทรศัพท์';
+
+    if (formData.requestType === 'project') {
+        if (!projectName.trim()) newErrors.projectName = 'กรุณากรอกชื่อโปรเจกต์';
+        subTasks.forEach((sub, index) => {
+            if (!sub.taskTitle.trim()) newErrors[`subTaskTitle_${sub.id}`] = `กรุณากรอกหัวข้องานที่ ${index + 1}`;
+            if (!sub.taskDescription.trim()) newErrors[`subTaskDescription_${sub.id}`] = `กรุณากรอกรายละเอียดงานที่ ${index + 1}`;
+            if (!sub.dueDate) newErrors[`subTaskDueDate_${sub.id}`] = `กรุณาเลือกวันที่ต้องการรับงานที่ ${index + 1}`;
+            if (sub.taskType === TaskType.OTHER && !sub.otherTaskTypeName.trim()) newErrors[`subTaskOtherType_${sub.id}`] = `กรุณาระบุประเภทงานที่ ${index + 1}`;
+        });
     } else {
-        const requestDateOnly = new Date();
-        requestDateOnly.setHours(0, 0, 0, 0);
-        if (new Date(data.dueDate) < requestDateOnly) {
-            errors.dueDate = 'วันที่ต้องการรับงานต้องไม่เก่ากว่าวันที่สั่งงาน';
+        if (!formData.dueDate) {
+            newErrors.dueDate = 'กรุณาเลือกวันที่ต้องการรับงาน';
+        } else {
+            const requestDateOnly = new Date();
+            requestDateOnly.setHours(0, 0, 0, 0);
+            if (new Date(formData.dueDate) < requestDateOnly) {
+                newErrors.dueDate = 'วันที่ต้องการรับงานต้องไม่เก่ากว่าวันที่สั่งงาน';
+            }
         }
+        if (formData.taskType === TaskType.OTHER && !formData.otherTaskTypeName.trim()) {
+            newErrors.otherTaskTypeName = 'กรุณาระบุประเภทงาน';
+        }
+        if (!formData.taskTitle.trim()) newErrors.taskTitle = 'กรุณากรอกหัวข้องาน';
+        if (!formData.taskDescription.trim()) newErrors.taskDescription = 'กรุณากรอกรายละเอียดงาน';
     }
-    if (!data.requesterName.trim()) errors.requesterName = 'กรุณากรอกชื่อ-สกุล';
-    if (!data.department.trim()) errors.department = 'กรุณากรอกสังกัดฝ่าย/ส่วน';
-    if (!data.phone.trim()) {
-        errors.phone = 'กรุณากรอกเบอร์โทรศัพท์';
-    }
-    if (data.taskType === TaskType.OTHER && !data.otherTaskTypeName.trim()) {
-        errors.otherTaskTypeName = 'กรุณาระบุประเภทงาน';
-    }
-    if (!data.taskTitle.trim()) errors.taskTitle = 'กรุณากรอกหัวข้องาน';
-    if (!data.taskDescription.trim()) errors.taskDescription = 'กรุณากรอกรายละเอียดงาน';
     
-    return errors;
+    return newErrors;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -109,6 +136,28 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
             return newErrors;
         });
     }
+  };
+
+  const handleSubTaskChange = (id: string, field: keyof SubTask, value: string) => {
+      setSubTasks(prev => prev.map(sub => sub.id === id ? {...sub, [field]: value} : sub));
+      const errorKey = `subTask${field.charAt(0).toUpperCase() + field.slice(1)}_${id}`;
+      if (errors[errorKey]) {
+          setErrors(prevErrors => {
+              const newErrors = {...prevErrors};
+              delete newErrors[errorKey];
+              return newErrors;
+          })
+      }
+  };
+
+  const addSubTask = () => {
+      setSubTasks(prev => [...prev, { id: uuidv4(), taskType: TaskType.OTHER, otherTaskTypeName: '', taskTitle: '', taskDescription: '', dueDate: '' }]);
+  };
+
+  const removeSubTask = (id: string) => {
+      if (subTasks.length > 1) {
+        setSubTasks(prev => prev.filter(sub => sub.id !== id));
+      }
   };
   
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -126,7 +175,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
   };
 
   const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({...prev, requestType: e.target.value as 'new' | 'edit' | 'other'}));
+    setFormData(prev => ({...prev, requestType: e.target.value as 'new' | 'edit' | 'other' | 'project'}));
   };
 
   const handleFileChange = (files: FileList | null) => {
@@ -164,7 +213,8 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
     const formErrors = validate();
     if (Object.keys(formErrors).length > 0) {
         setErrors(formErrors);
-        const firstErrorField = document.querySelector(`[name="${Object.keys(formErrors)[0]}"]`);
+        const firstErrorKey = Object.keys(formErrors)[0];
+        const firstErrorField = document.querySelector(`[name="${firstErrorKey}"]`) || document.getElementById(firstErrorKey);
         firstErrorField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
@@ -201,30 +251,73 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
                     console.error('Error uploading file to Google Drive:', file.name, error);
                 }
             }
-            // Fallback if upload fails or URL is not configured
             return { name: file.name, size: file.size, type: file.type };
         });
         
         const fileData = await Promise.all(attachmentPromises);
         
         const existingIds = tasks.map(t => parseInt(t.id.replace('PR', ''), 10)).filter(id => !isNaN(id));
-        const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-        const nextId = `PR${(maxId + 1).toString().padStart(3, '0')}`;
+        let maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
         
-        const { position, ...restFormData } = formData;
+        if (formData.requestType === 'project') {
+            const projectId = `PROJ${Date.now()}`;
+            const projectTasks: Task[] = subTasks.map(sub => {
+                maxId++;
+                const nextId = `PR${(maxId).toString().padStart(3, '0')}`;
+                
+                const taskData: Task = {
+                    id: nextId,
+                    projectId: projectId,
+                    projectName: projectName,
+                    taskTitle: sub.taskTitle,
+                    taskDescription: sub.taskDescription,
+                    taskType: sub.taskType,
+                    dueDate: sub.dueDate,
+                    requestType: 'project',
+                    requesterName: formData.requesterName,
+                    department: formData.department,
+                    committee: formData.committee,
+                    requesterEmail: formData.requesterEmail,
+                    phone: formData.phone,
+                    additionalNotes: formData.additionalNotes,
+                    timestamp: new Date().toISOString(),
+                    attachments: fileData,
+                    assigneeId: null,
+                    status: TaskStatus.NOT_STARTED,
+                    isStarred: false,
+                    notes: [],
+                };
 
-        const newTask: Task = {
-          ...restFormData,
-          id: nextId,
-          timestamp: new Date().toISOString(),
-          attachments: fileData,
-          assigneeId: null,
-          status: TaskStatus.NOT_STARTED,
-          isStarred: false,
-          notes: [],
-        };
-        
-        onTaskAdded(newTask);
+                if (sub.taskType === TaskType.OTHER) {
+                    taskData.otherTaskTypeName = sub.otherTaskTypeName;
+                }
+                
+                return taskData;
+            });
+            onTaskAdded(projectTasks);
+        } else {
+             maxId++;
+             const nextId = `PR${(maxId).toString().padStart(3, '0')}`;
+             const { position, ...restFormData } = formData;
+             const newTask: Task = {
+              ...restFormData,
+              id: nextId,
+              timestamp: new Date().toISOString(),
+              attachments: fileData,
+              assigneeId: null,
+              status: TaskStatus.NOT_STARTED,
+              isStarred: false,
+              notes: [],
+            };
+
+            // If the task type is not 'Other', remove the 'otherTaskTypeName' property
+            // to avoid sending an empty string to Firestore.
+            if (newTask.taskType !== TaskType.OTHER) {
+                delete (newTask as Partial<Task>).otherTaskTypeName;
+            }
+
+            onTaskAdded(newTask);
+        }
     } catch (error) {
         console.error("Error during form submission:", error);
         alert('เกิดข้อผิดพลาดในการส่งฟอร์ม กรุณาลองใหม่อีกครั้ง');
@@ -246,6 +339,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
                 <div className="flex flex-wrap gap-4 mt-2">
                     <RadioOption name="requestType" value="new" checked={formData.requestType === 'new'} onChange={handleRadioChange} label="สั่งงานใหม่" />
                     <RadioOption name="requestType" value="edit" checked={formData.requestType === 'edit'} onChange={handleRadioChange} label="แก้ไขงาน" />
+                    <RadioOption name="requestType" value="project" checked={formData.requestType === 'project'} onChange={handleRadioChange} label="สั่งงานเป็นโปรเจกต์" />
                     <RadioOption name="requestType" value="other" checked={formData.requestType === 'other'} onChange={handleRadioChange} label="อื่นๆ" />
                 </div>
             </div>
@@ -257,7 +351,8 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
                 readOnly 
                 className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed" 
             />
-            <InputField label="3. วัน/เดือน/ปี (ที่ต้องการรับงาน) *" name="dueDate" type="date" value={formData.dueDate} onChange={handleChange} onBlur={handleBlur} error={errors.dueDate} required icon={<FiCalendar className="w-5 h-5 text-gray-400" />} />
+            { formData.requestType !== 'project' && <InputField label="3. วัน/เดือน/ปี (ที่ต้องการรับงาน) *" name="dueDate" type="date" value={formData.dueDate} onChange={handleChange} onBlur={handleBlur} error={errors.dueDate} required icon={<FiCalendar className="w-5 h-5 text-gray-400" />} /> }
+
             <InputField label="4. ชื่อ-สกุล ผู้สั่งงาน *" name="requesterName" value={formData.requesterName} readOnly className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed"/>
             <InputField label="5. สังกัดฝ่าย/ส่วน *" name="department" value={formData.department} readOnly className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed"/>
             <InputField label="6. เป็นชิ้นงานของคณะกรรมการฯ คณะอนุกรรมการ หรือคณะทำงานใด? (หากไม่มี ไม่ต้องระบุ)" name="committee" value={formData.committee} onChange={handleChange} onBlur={handleBlur} placeholder="เช่น คณะกรรมการกำหนดมาตรฐานการบัญชี"/>
@@ -265,38 +360,141 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
             <InputField label="เบอร์โทรศัพท์ *" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} error={errors.phone} required placeholder="เช่น 2546 หรือ 0-2685-2500" />
         </FormSection>
 
-        <FormSection title="รายละเอียดชิ้นงาน">
-            <div className="md:col-span-2">
-                <label className="form-label">8. ประเภทงานที่ประสงค์รับบริการ *</label>
-                <select name="taskType" value={formData.taskType} onChange={handleChange} className="form-input mt-1" required>
-                    {Object.values(TaskType).map(type => <option key={type} value={type}>{type}</option>)}
-                </select>
-            </div>
-             {formData.taskType === TaskType.OTHER && (
-                 <div className="md:col-span-2">
-                    <InputField label="9. งานชนิดอื่น ๆ ที่ไม่มีในตัวเลือก โปรดระบุ.... *" name="otherTaskTypeName" value={formData.otherTaskTypeName} onChange={handleChange} onBlur={handleBlur} error={errors.otherTaskTypeName} required placeholder="ระบุประเภทงานอื่นๆ" />
-                </div>
-             )}
-            <InputField label="หัวข้องาน *" name="taskTitle" value={formData.taskTitle} onChange={handleChange} onBlur={handleBlur} error={errors.taskTitle} required placeholder="เช่น ออกแบบโปสเตอร์งานสัมมนา" wrapperClassName="md:col-span-2"/>
-            <div className="md:col-span-2">
-                <label className="form-label">รายละเอียดงาน *</label>
-                <textarea name="taskDescription" value={formData.taskDescription} onChange={handleChange} onBlur={handleBlur} rows={4} className={`form-input mt-1 focus:outline-none focus:ring-2 ${errors.taskDescription ? 'border-red-500 focus:ring-red-500' : 'focus:ring-brand-secondary'}`} required placeholder="โปรดระบุรายละเอียดของงาน เช่น ขนาด สี รูปแบบ วัตถุประสงค์ ฯลฯ" aria-invalid={!!errors.taskDescription} aria-describedby={errors.taskDescription ? 'taskDescription-error' : undefined}/>
-                <AnimatePresence>
-                    {errors.taskDescription && (
-                    <motion.p
-                        id="taskDescription-error"
-                        className="mt-1 text-sm text-red-600"
-                        initial={{ opacity: 0, y: -5 }}
+        <AnimatePresence mode="wait">
+        {formData.requestType === 'project' ? (
+          <motion.div key="project-form" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <FormSection title="รายละเอียดโปรเจกต์">
+                 <InputField 
+                    label="ชื่อโปรเจกต์ *" 
+                    name="projectName" 
+                    value={projectName} 
+                    onChange={(e) => setProjectName(e.target.value)} 
+                    error={errors.projectName} 
+                    required 
+                    placeholder="เช่น งานสัมมนาประจำปี 2568" 
+                    wrapperClassName="md:col-span-2"
+                />
+
+                {subTasks.map((subTask, index) => (
+                    <motion.div 
+                        key={subTask.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
-                        transition={{ duration: 0.2 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="md:col-span-2 p-4 border border-gray-200 dark:border-gray-700 rounded-lg space-y-4 bg-gray-50 dark:bg-gray-800/50 relative"
                     >
-                        {errors.taskDescription}
-                    </motion.p>
-                    )}
-                </AnimatePresence>
-            </div>
-        </FormSection>
+                         <div className="flex justify-between items-center">
+                            <h4 className="font-bold text-lg text-brand-primary">รายการงานที่ {index + 1}</h4>
+                            {subTasks.length > 1 && (
+                                <button type="button" onClick={() => removeSubTask(subTask.id)} className="icon-interactive text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 p-1 rounded-full"><FiTrash2 /></button>
+                            )}
+                        </div>
+                        
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="form-label">ประเภทงาน *</label>
+                                <select 
+                                    name={`subTaskType_${subTask.id}`} 
+                                    value={subTask.taskType} 
+                                    onChange={(e) => handleSubTaskChange(subTask.id, 'taskType', e.target.value)} 
+                                    className="form-input mt-1" 
+                                    required
+                                >
+                                    {Object.values(TaskType).map(type => <option key={type} value={type}>{type}</option>)}
+                                </select>
+                            </div>
+                            {subTask.taskType === TaskType.OTHER && (
+                                <InputField 
+                                    label="โปรดระบุประเภทงาน *" 
+                                    id={`subTaskOtherType_${subTask.id}`} 
+                                    value={subTask.otherTaskTypeName} 
+                                    onChange={(e) => handleSubTaskChange(subTask.id, 'otherTaskTypeName', e.target.value)}
+                                    error={errors[`subTaskOtherType_${subTask.id}`]}
+                                    required 
+                                />
+                            )}
+                         </div>
+
+                         <InputField 
+                            label="หัวข้องาน *" 
+                            id={`subTaskTitle_${subTask.id}`} 
+                            value={subTask.taskTitle} 
+                            onChange={(e) => handleSubTaskChange(subTask.id, 'taskTitle', e.target.value)}
+                            error={errors[`subTaskTitle_${subTask.id}`]}
+                            required
+                        />
+                        <div className="w-full">
+                            <label className="form-label">รายละเอียดงาน *</label>
+                            <textarea 
+                                name={`subTaskDescription_${subTask.id}`} 
+                                value={subTask.taskDescription} 
+                                onChange={(e) => handleSubTaskChange(subTask.id, 'taskDescription', e.target.value)} 
+                                rows={3} 
+                                className={`form-input mt-1 ${errors[`subTaskDescription_${subTask.id}`] ? 'border-red-500' : ''}`} 
+                                required 
+                            />
+                            {errors[`subTaskDescription_${subTask.id}`] && <p className="text-red-500 text-sm mt-1">{errors[`subTaskDescription_${subTask.id}`]}</p>}
+                        </div>
+                        <InputField 
+                            label="วันที่ต้องการรับงาน *" 
+                            type="date" 
+                            name={`subTaskDueDate_${subTask.id}`} 
+                            value={subTask.dueDate} 
+                            onChange={(e) => handleSubTaskChange(subTask.id, 'dueDate', e.target.value)}
+                            error={errors[`subTaskDueDate_${subTask.id}`]}
+                            required 
+                            icon={<FiCalendar />}
+                        />
+
+                    </motion.div>
+                ))}
+                 <div className="md:col-span-2">
+                    <button type="button" onClick={addSubTask} className="icon-interactive w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <FiPlus /> เพิ่มรายการงาน
+                    </button>
+                </div>
+
+            </FormSection>
+          </motion.div>
+        ) : (
+          <motion.div key="single-task-form" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <FormSection title="รายละเอียดชิ้นงาน">
+                <div className="md:col-span-2">
+                    <label className="form-label">8. ประเภทงานที่ประสงค์รับบริการ *</label>
+                    <select name="taskType" value={formData.taskType} onChange={handleChange} className="form-input mt-1" required>
+                        {Object.values(TaskType).map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                </div>
+                 {formData.taskType === TaskType.OTHER && (
+                     <div className="md:col-span-2">
+                        <InputField label="9. งานชนิดอื่น ๆ ที่ไม่มีในตัวเลือก โปรดระบุ.... *" name="otherTaskTypeName" value={formData.otherTaskTypeName} onChange={handleChange} onBlur={handleBlur} error={errors.otherTaskTypeName} required placeholder="ระบุประเภทงานอื่นๆ" />
+                    </div>
+                 )}
+                <InputField label="หัวข้องาน *" name="taskTitle" value={formData.taskTitle} onChange={handleChange} onBlur={handleBlur} error={errors.taskTitle} required placeholder="เช่น ออกแบบโปสเตอร์งานสัมมนา" wrapperClassName="md:col-span-2"/>
+                <div className="md:col-span-2">
+                    <label className="form-label">รายละเอียดงาน *</label>
+                    <textarea name="taskDescription" value={formData.taskDescription} onChange={handleChange} onBlur={handleBlur} rows={4} className={`form-input mt-1 focus:outline-none focus:ring-2 ${errors.taskDescription ? 'border-red-500 focus:ring-red-500' : 'focus:ring-brand-secondary'}`} required placeholder="โปรดระบุรายละเอียดของงาน เช่น ขนาด สี รูปแบบ วัตถุประสงค์ ฯลฯ" aria-invalid={!!errors.taskDescription} aria-describedby={errors.taskDescription ? 'taskDescription-error' : undefined}/>
+                    <AnimatePresence>
+                        {errors.taskDescription && (
+                        <motion.p
+                            id="taskDescription-error"
+                            className="mt-1 text-sm text-red-600"
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -5 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            {errors.taskDescription}
+                        </motion.p>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </FormSection>
+          </motion.div>
+        )}
+        </AnimatePresence>
 
         <div>
           <label className="form-label">10. กรุณาอัปโหลดข้อมูลประกอบการผลิต แก้ไข และขนาดชิ้นงานได้ที่นี่</label>
@@ -367,10 +565,10 @@ const InputField: React.FC<InputFieldProps> = ({ label, wrapperClassName = '', e
     const { className, ...restProps } = props;
     return (
         <div className={wrapperClassName}>
-            <label htmlFor={props.name} className="form-label">{label}</label>
+            <label htmlFor={props.name || props.id} className="form-label">{label}</label>
             <div className="relative mt-1">
                 <input
-                    id={props.name}
+                    id={props.name || props.id}
                     {...restProps}
                     className={`form-input !mt-0 w-full focus:outline-none focus:ring-2 ${error ? 'border-red-500 focus:ring-red-500' : 'focus:ring-brand-secondary'} ${icon ? 'pr-10' : ''} ${className || ''}`}
                     aria-invalid={!!error}

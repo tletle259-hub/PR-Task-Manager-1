@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
+import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiXCircle, FiBriefcase, FiLink, FiChevronsRight } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType, Note } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 import Confetti from './Confetti';
+import { onTasksUpdate } from '../services/taskService';
 
 interface TaskModalProps {
   task: Task;
@@ -11,6 +12,7 @@ interface TaskModalProps {
   onClose: () => void;
   onSave: (task: Task) => void;
   currentUser: TeamMember;
+  onSelectTask: (task: Task) => void;
 }
 
 const Section: React.FC<{ title: string, children: React.ReactNode, card?: boolean }> = ({ title, children, card = false }) => (
@@ -37,11 +39,28 @@ const EditableField: React.FC<{ label: string, children: React.ReactNode }> = ({
 );
 
 
-const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSave, currentUser }) => {
+const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSave, currentUser, onSelectTask }) => {
   const [editedTask, setEditedTask] = useState<Task>(task);
   const [newNoteText, setNewNoteText] = useState('');
   const [editingNote, setEditingNote] = useState<{ id: string, text: string } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+      setEditedTask(task);
+  }, [task]);
+
+  useEffect(() => {
+      if(task.projectId) {
+          const unsubscribe = onTasksUpdate((allTasks) => {
+              const relatedTasks = allTasks.filter(t => t.projectId === task.projectId && t.id !== task.id)
+                                          .sort((a,b) => a.id.localeCompare(b.id));
+              setProjectTasks(relatedTasks);
+          });
+          return () => unsubscribe();
+      }
+  }, [task.projectId, task.id]);
+
 
   const handleSave = () => {
     onSave(editedTask);
@@ -123,6 +142,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
       >
         <header className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
           <div>
+            {task.projectName && (
+                <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2 mb-1">
+                    <FiBriefcase />
+                    {task.projectName}
+                </p>
+            )}
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskTitle}</h2>
             <p className="text-sm font-semibold text-blue-500">{task.id}</p>
           </div>
@@ -144,6 +169,46 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                     <InfoItem label="อีเมล" value={<a href={`mailto:${task.requesterEmail}`} className="text-blue-500 hover:underline">{task.requesterEmail}</a>} />
                     <InfoItem label="เบอร์โทรศัพท์" value={task.phone} />
                 </Section>
+                
+                 {projectTasks.length > 0 && (
+                    <Section title="ภาพรวมโปรเจกต์" card>
+                        <p className="text-xs text-gray-500 mb-2">แสดงรายการงานย่อยอื่น ๆ ในโปรเจกต์เดียวกัน (คลิกเพื่อดูรายละเอียด)</p>
+                        <ul className="space-y-2">
+                           {projectTasks.map(pt => {
+                                const assignee = teamMembers.find(m => m.id === pt.assigneeId);
+                                const taskTypeName = pt.taskType === TaskType.OTHER ? pt.otherTaskTypeName : pt.taskType;
+
+                                return (
+                                    <li key={pt.id}>
+                                        <button 
+                                            onClick={() => onSelectTask(pt)}
+                                            className="w-full text-left p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                                        >
+                                            <div className="flex justify-between items-center text-sm">
+                                                <div className="flex-grow">
+                                                    <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                                        <FiLink size={12}/>
+                                                        {pt.taskTitle} 
+                                                        <span className="font-normal text-xs text-gray-400">({pt.id})</span>
+                                                    </p>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-5">
+                                                        <span>ประเภท: {taskTypeName}</span>
+                                                        <span className="mx-2">|</span>
+                                                        <span>ผู้รับผิดชอบ: {assignee ? assignee.name : 'ยังไม่มอบหมาย'}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <span className={`px-2 py-0.5 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[pt.status]}`}>{pt.status}</span>
+                                                    <FiChevronsRight className="text-gray-400" />
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </Section>
+                 )}
 
                 <Section title="ไฟล์แนบ" card>
                     {task.attachments.length > 0 ? (

@@ -56,11 +56,15 @@ export interface Task {
   notes: Note[];
 
   // New fields for the detailed form
-  requestType: 'new' | 'edit' | 'other';
+  requestType: 'new' | 'edit' | 'other' | 'project';
   committee?: string;
   phone: string;
   otherTaskTypeName?: string;
   additionalNotes?: string;
+
+  // New fields for Project-based tasks
+  projectId?: string;
+  projectName?: string;
 }
 
 export interface TeamMember {
