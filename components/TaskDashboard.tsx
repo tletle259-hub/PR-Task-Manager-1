@@ -364,9 +364,9 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTa
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
-            className="bg-white dark:bg-dark-card rounded-lg shadow p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+            className="bg-white dark:bg-dark-card rounded-lg shadow p-3 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4"
         >
-            <div className="flex items-center gap-3 flex-grow min-w-0">
+            <div className="flex items-center gap-3 flex-grow min-w-0 w-full lg:w-auto">
                  <button onClick={onToggleStar} aria-label="Toggle star" className={`icon-interactive flex-shrink-0 p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500' : 'text-gray-400 dark:text-dark-text-muted hover:text-yellow-500'}`}>
                     <FiStar size={20} className={`${task.isStarred ? 'fill-current' : ''}`}/>
                 </button>
@@ -383,10 +383,10 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTa
                     )}
                  </div>
             </div>
-             <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-6 gap-y-2 text-sm w-full sm:w-auto sm:justify-end">
-                 <div className={`px-2 py-1 text-xs font-semibold rounded-full ${bg} ${text}`}>{task.taskType}</div>
+             <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 text-sm w-full lg:w-auto lg:justify-end flex-shrink-0">
+                 <div className={`px-2 py-1 text-xs font-semibold rounded-full text-center ${bg} ${text} w-full sm:w-auto`}>{task.taskType}</div>
                  
-                 <div className="flex items-center gap-2 w-32">
+                 <div className="flex items-center gap-2 min-w-[150px]">
                      {assignee ? (
                            <>
                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getColorForString(assignee.id)} flex-shrink-0`}>
@@ -402,13 +402,13 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTa
                         )}
                  </div>
 
-                 <div className={`px-2 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} w-24 text-center`}>{task.status}</div>
+                 <div className={`px-2 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} w-28 text-center`}>{task.status}</div>
                  
-                 <div className="text-red-500 font-medium w-28 text-left sm:text-right">
+                 <div className="text-red-500 font-medium w-24 text-left">
                     <span>{new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1 ml-auto">
                     <button onClick={() => onSelectTask(task)} className="icon-interactive p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit3 /></button>
                     <button onClick={onDelete} className="icon-interactive p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
                 </div>
@@ -580,6 +580,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                                 {status} ({tasksByStatus[status].length})
                             </h3>
                             <div className="space-y-3 h-[calc(100vh-20rem)] overflow-y-auto p-1">
+                                <AnimatePresence>
                                 {tasksByStatus[status].map(task => (
                                     <TaskCard
                                         key={task.id}
@@ -591,6 +592,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                                         isCompact={true}
                                     />
                                 ))}
+                                </AnimatePresence>
                             </div>
                         </div>
                     ))}
@@ -601,6 +603,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
           default:
               return (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <AnimatePresence>
                       {filteredAndSortedTasks.map(task => (
                         <TaskCard 
                           key={task.id} 
@@ -611,6 +614,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                           onDelete={() => setTaskToDelete(task)}
                         />
                       ))}
+                    </AnimatePresence>
                   </div>
               );
       }
@@ -633,7 +637,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         }
       `}</style>
       <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-md mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-grow">
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
             <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ, ชื่อโปรเจกต์..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />

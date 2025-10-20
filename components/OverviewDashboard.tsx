@@ -351,7 +351,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
   return (
     <div className="space-y-6">
         <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-lg interactive-glow">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-dark-bg/50 rounded-lg">
                     {(['all', 'year', 'month', 'day'] as const).map(mode => (
                          <button key={mode} onClick={() => setFilterMode(mode)} className={`px-3 py-1.5 text-sm font-semibold rounded-md transition-colors ${filterMode === mode ? 'bg-white dark:bg-dark-muted shadow' : 'hover:bg-gray-200 dark:hover:bg-dark-muted/50'}`}>
@@ -366,7 +366,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
                         animate={{ opacity: 1, width: 'auto' }}
                         exit={{ opacity: 0, width: 0 }}
                         transition={{ duration: 0.3 }}
-                        className="flex items-center gap-2 overflow-hidden"
+                        className="flex flex-col sm:flex-row items-center gap-2 overflow-hidden mt-2 sm:mt-0"
                     >
                          {filterMode === 'year' && (
                              <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="form-input">
@@ -395,7 +395,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
          <StatCard icon={<FiArchive size={24}/>} title="งานทั้งหมด (ที่กรอง)" value={totalTasks} gradient="bg-gradient-to-br from-purple-500 to-indigo-600" />
          <StatCard icon={<FiUsers size={24} />} title="สมาชิกในทีม" value={teamMembers.length} gradient="bg-gradient-to-br from-sky-500 to-cyan-500" />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard icon={<FiClock size={24}/>} title="ยังไม่ดำเนินการ" value={notStartedTasks} gradient="bg-gradient-to-br from-gray-500 to-slate-600" onClick={() => onSetFilters({ status: TaskStatus.NOT_STARTED })} />
         <StatCard icon={<FiLoader size={24}/>} title="กำลังดำเนินการ" value={inProgressTasks} gradient="bg-gradient-to-br from-yellow-500 to-amber-600" onClick={() => onSetFilters({ status: TaskStatus.IN_PROGRESS })} />
         <StatCard icon={<FiCheckCircle size={24}/>} title="เสร็จสิ้น" value={completedTasks} gradient="bg-gradient-to-br from-green-500 to-emerald-600" onClick={() => onSetFilters({ status: TaskStatus.COMPLETED })} />

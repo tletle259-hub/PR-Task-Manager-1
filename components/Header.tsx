@@ -143,11 +143,11 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
             <FiMenu size={24} />
         </button>
         <div>
-            <h2 className="text-xl font-semibold">ยินดีต้อนรับ, {currentUser?.name || 'ทีม'}!</h2>
-            <p className="text-sm text-gray-500 dark:text-dark-text-muted">{formattedDateTime}</p>
+            <h2 className="text-lg sm:text-xl font-semibold">ยินดีต้อนรับ, {currentUser?.name || 'ทีม'}!</h2>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-dark-text-muted hidden sm:block">{formattedDateTime}</p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button
           onClick={toggleTheme}
           className="icon-interactive p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-muted dark:hover:bg-dark-border transition-colors"

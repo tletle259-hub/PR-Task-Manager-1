@@ -144,16 +144,19 @@
           border-color: #4b5563; /* dark:border-gray-600 */
           background-color: #374151; /* dark:bg-gray-700 */
       }
-      /* Fix for date picker icon color in dark/light modes */
-      input[type="date"]::-webkit-calendar-picker-indicator {
-          cursor: pointer;
-          /* Assumes default icon is light-colored.
-             - Light mode (fallback): invert(1) -> dark icon.
-             - Dark mode (variable): invert(0) -> light icon. */
-          filter: invert(var(--dark-mode-invert, 1));
+      /* Improved date picker icon color in dark/light modes */
+      .dark input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
       }
-      .dark {
-          --dark-mode-invert: 0;
+
+      /* Responsive base font size */
+      html {
+        font-size: 14px;
+      }
+      @media (min-width: 640px) {
+        html {
+          font-size: 16px;
+        }
       }
     </style>
   <script type="importmap">

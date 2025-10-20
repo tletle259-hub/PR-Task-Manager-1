@@ -140,23 +140,23 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
         className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <header className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-          <div>
+        <header className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start flex-shrink-0">
+          <div className="flex-grow">
             {task.projectName && (
                 <p className="text-sm font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-2 mb-1">
                     <FiBriefcase />
                     {task.projectName}
                 </p>
             )}
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskTitle}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskTitle}</h2>
             <p className="text-sm font-semibold text-blue-500">{task.id}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="icon-interactive p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+          <button onClick={onClose} aria-label="Close" className="icon-interactive p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-4">
             <FiX size={24} />
           </button>
         </header>
 
-        <main className="p-6 overflow-y-auto flex-grow">
+        <main className="p-4 sm:p-6 overflow-y-auto flex-grow">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-3 space-y-6">
                 <Section title="รายละเอียด">
@@ -185,8 +185,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                             className="w-full text-left p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
                                         >
                                             <div className="flex justify-between items-center text-sm">
-                                                <div className="flex-grow">
-                                                    <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                                <div className="flex-grow min-w-0">
+                                                    <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 truncate">
                                                         <FiLink size={12}/>
                                                         {pt.taskTitle} 
                                                         <span className="font-normal text-xs text-gray-400">({pt.id})</span>
@@ -197,7 +197,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                                         <span>ผู้รับผิดชอบ: {assignee ? assignee.name : 'ยังไม่มอบหมาย'}</span>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                                     <span className={`px-2 py-0.5 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[pt.status]}`}>{pt.status}</span>
                                                     <FiChevronsRight className="text-gray-400" />
                                                 </div>
@@ -310,7 +310,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
           </div>
         </main>
 
-        <footer className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-4 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
+        <footer className="p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-4 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
           <button onClick={onClose} className="icon-interactive px-6 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
             ยกเลิก
           </button>
