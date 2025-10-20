@@ -7,7 +7,7 @@ import { onCalendarEventsUpdate, saveCalendarEvents, deleteCalendarEvent, addCal
 
 type ViewMode = 'month' | 'week' | 'day';
 
-// FIX: Define a union type for items in the calendar to handle Tasks and CalendarEvents.
+// A union type for items in the calendar to handle Tasks and CalendarEvents.
 type CalendarItem = (Task & { itemType: 'task' }) | (CalendarEvent & { itemType: 'event' });
 
 const EVENT_COLORS = [ '#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899'];
@@ -187,8 +187,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
 
           return <div className="grid grid-cols-7 grid-rows-5 auto-rows-fr gap-1 flex-grow">
               {daysInMonth.map((day, index) => {
-                  // FIX: Use an if/else block inside the filter to narrow the type of 'item'
-                  // and correctly access 'dueDate' for tasks and 'start' for events.
                   const itemsForDay = day.date ? allItems.filter(item => {
                       if (item.itemType === 'task') {
                           return isSameDay(new Date(item.dueDate), day.date as Date);
@@ -201,7 +199,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
                        {day.date && <span className={`self-end text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full ${isSameDay(day.date, today) ? 'bg-brand-primary text-white' : 'text-gray-500 dark:text-dark-text-muted'}`}>{day.date.getDate()}</span>}
                       <div className="flex-grow mt-1 space-y-1 overflow-y-auto text-left text-xs">
                           {itemsForDay.slice(0,3).map(item => {
-                              // FIX: Use type guards to safely access properties and pass correct types to handlers.
                               const isTask = item.itemType === 'task';
                               const title = isTask ? item.taskTitle : item.title;
                               const colorHex = isTask ? TASK_TYPE_COLORS[item.taskType]?.hex : item.color;
@@ -235,7 +232,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
 
           return <div className="grid grid-cols-7 gap-1 flex-grow">
               {weekDays.map(day => {
-                   // FIX: Use an if/else block inside the filter to narrow the type of 'item'.
                    const itemsForDay = allItems.filter(item => {
                        if (item.itemType === 'task') {
                            return isSameDay(new Date(item.dueDate), day);
@@ -249,7 +245,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
                            <p className="text-xl">{day.getDate()}</p>
                        </div>
                        <div className="space-y-1 overflow-y-auto text-xs">{itemsForDay.map(item => {
-                           // FIX: Use type guards to safely access properties and pass correct types to handlers.
                            const isTask = item.itemType === 'task';
                            const title = isTask ? item.taskTitle : item.title;
                            const colorHex = isTask ? TASK_TYPE_COLORS[item.taskType]?.hex : item.color;
@@ -275,7 +270,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
       }
 
        if(viewMode === 'day') {
-          // FIX: Use type guards for filtering and sorting to correctly access date properties.
           const itemsForDay = allItems.filter(item => {
               if (item.itemType === 'task') {
                   return isSameDay(new Date(item.dueDate), currentDate);
@@ -290,7 +284,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
           return <div className="bg-white dark:bg-dark-card/50 rounded-lg p-4 flex-grow overflow-y-auto">
               <h3 className="text-xl font-bold mb-4">{currentDate.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h3>
               <div className="space-y-2">{itemsForDay.map(item => {
-                // FIX: Use type guards to safely access properties and pass correct types to handlers.
                 const isTask = item.itemType === 'task';
                 const title = isTask ? item.taskTitle : item.title;
                 const colorHex = isTask ? TASK_TYPE_COLORS[item.taskType]?.hex : item.color;

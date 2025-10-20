@@ -191,8 +191,15 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                         {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                 </EditableField>
+                 <EditableField label="กำหนดส่ง">
+                    <input
+                        type="date"
+                        value={editedTask.dueDate.split('T')[0]}
+                        onChange={e => setEditedTask({ ...editedTask, dueDate: e.target.value })}
+                        className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none"
+                    />
+                </EditableField>
                 <Section title="ข้อมูลงาน" card>
-                    <InfoItem label="กำหนดส่ง" value={new Date(task.dueDate).toLocaleDateString('th-TH')} />
                     <InfoItem label="วันที่สั่ง" value={new Date(task.timestamp).toLocaleDateString('th-TH')} />
                     <InfoItem label="ประเภทการสั่งงาน" value={task.requestType} />
                     <InfoItem label="ประเภทงาน" value={task.taskType === TaskType.OTHER ? task.otherTaskTypeName : task.taskType} />

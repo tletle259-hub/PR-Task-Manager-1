@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiGrid, FiChevronDown, FiX, FiAlertTriangle } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskType } from '../types';
-import { TASK_STATUS_COLORS, TASK_TYPE_COLORS } from '../constants';
+import { TASK_STATUS_COLORS, TASK_TYPE_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
 
 // --- NEW CONFIRMATION MODAL COMPONENT ---
@@ -83,8 +83,6 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 };
 
 
-// --- HELPER COMPONENTS ---
-
 // Pill for displaying an active filter
 const ActiveFilterPill: React.FC<{ label: string; onRemove: () => void; colorClasses: string }> = ({ label, onRemove, colorClasses }) => (
   <motion.div
@@ -101,85 +99,6 @@ const ActiveFilterPill: React.FC<{ label: string; onRemove: () => void; colorCla
     </button>
   </motion.div>
 );
-
-// Custom dropdown for filtering
-const FilterDropdown: React.FC<{
-  label: string;
-  options: { value: string; label: string }[];
-  selectedValue: string;
-  onSelect: (value: string) => void;
-  icon: React.ReactNode;
-}> = ({ label, options, selectedValue, onSelect, icon }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const isActive = selectedValue !== 'all';
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <motion.button
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className={`icon-interactive flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all duration-200 ${
-          isActive
-            ? 'bg-brand-primary text-white border-transparent shadow-md dark:bg-dark-accent dark:text-dark-bg'
-            : 'bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border'
-        }`}
-      >
-        {icon}
-        <span>{label}</span>
-        <FiChevronDown
-          size={16}
-          className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 mt-2 w-64 bg-white dark:bg-dark-muted rounded-lg shadow-xl z-10 overflow-hidden border border-gray-200 dark:border-dark-border"
-          >
-            <ul className="max-h-72 overflow-y-auto">
-                <li key="all">
-                    <button onClick={() => { onSelect('all'); setIsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border">
-                        ทั้งหมด
-                    </button>
-                </li>
-              {options.map(option => (
-                <li key={option.value}>
-                  <button
-                    onClick={() => { onSelect(option.value); setIsOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm ${
-                      selectedValue === option.value
-                        ? 'bg-brand-primary/10 text-brand-primary font-semibold dark:bg-dark-accent/10 dark:text-dark-accent'
-                        : 'text-gray-700 dark:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-border'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 // --- Color generation for user icons ---
 const BG_COLORS = [
@@ -198,6 +117,146 @@ const getColorForString = (str: string) => {
   const index = Math.abs(hash % BG_COLORS.length);
   return BG_COLORS[index];
 };
+
+
+const formatToYyyyMmDd = (date: Date) => date.toISOString().split('T')[0];
+
+const initialFilterState = { status: 'all', type: 'all', assignee: 'all' };
+const initialDateFilterState = {
+    type: 'timestamp',
+    period: 'all',
+    date: formatToYyyyMmDd(new Date()),
+    month: new Date().getMonth(),
+    year: new Date().getFullYear(),
+};
+
+// --- NEW FILTER PANEL COMPONENT ---
+const FilterPanel: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onApply: (newFilters: typeof initialFilterState, newDateFilter: typeof initialDateFilterState) => void;
+    currentFilters: typeof initialFilterState;
+    currentDateFilter: typeof initialDateFilterState;
+    teamMembers: TeamMember[];
+    availableYears: number[];
+}> = ({ isOpen, onClose, onApply, currentFilters, currentDateFilter, teamMembers, availableYears }) => {
+    const [tempFilters, setTempFilters] = useState(currentFilters);
+    const [tempDateFilter, setTempDateFilter] = useState(currentDateFilter);
+    
+    useEffect(() => {
+        setTempFilters(currentFilters);
+        setTempDateFilter(currentDateFilter);
+    }, [isOpen, currentFilters, currentDateFilter]);
+
+    const handleApply = () => {
+        onApply(tempFilters, tempDateFilter);
+        onClose();
+    };
+
+    const handleClear = () => {
+        setTempFilters(initialFilterState);
+        setTempDateFilter(initialDateFilterState);
+    };
+
+    const handleDateFilterChange = (field: string, value: any) => {
+        setTempDateFilter(prev => ({ ...prev, [field]: value }));
+    };
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                 <>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="fixed inset-0 bg-black/60 z-30"
+                        onClick={onClose}
+                    />
+                    <motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                        className="fixed top-0 right-0 h-full w-full max-w-sm bg-white dark:bg-dark-card shadow-2xl z-40 flex flex-col"
+                    >
+                        <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-dark-border flex-shrink-0">
+                            <h3 className="text-lg font-bold">ตัวกรอง</h3>
+                            <button onClick={onClose} className="icon-interactive p-2 rounded-full hover:bg-gray-100 dark:hover:bg-dark-muted">
+                                <FiX />
+                            </button>
+                        </header>
+                        <main className="p-6 overflow-y-auto flex-grow space-y-6">
+                            <FilterSection title="สถานะ">
+                                <select value={tempFilters.status} onChange={e => setTempFilters({...tempFilters, status: e.target.value})} className="filter-select">
+                                    <option value="all">ทั้งหมด</option>
+                                    {Object.values(TaskStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </FilterSection>
+                             <FilterSection title="ประเภทงาน">
+                                <select value={tempFilters.type} onChange={e => setTempFilters({...tempFilters, type: e.target.value})} className="filter-select">
+                                    <option value="all">ทั้งหมด</option>
+                                    {Object.values(TaskType).map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                            </FilterSection>
+                             <FilterSection title="ผู้รับผิดชอบ">
+                                <select value={tempFilters.assignee} onChange={e => setTempFilters({...tempFilters, assignee: e.target.value})} className="filter-select">
+                                    <option value="all">ทั้งหมด</option>
+                                    {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                            </FilterSection>
+                            <FilterSection title="วันที่">
+                                <div className="space-y-4">
+                                    <select value={tempDateFilter.type} onChange={e => handleDateFilterChange('type', e.target.value)} className="filter-select">
+                                        <option value="timestamp">วันที่สั่ง</option>
+                                        <option value="dueDate">กำหนดส่ง</option>
+                                    </select>
+                                    <select value={tempDateFilter.period} onChange={e => handleDateFilterChange('period', e.target.value)} className="filter-select">
+                                        <option value="all">ทั้งหมด</option>
+                                        <option value="day">รายวัน</option>
+                                        <option value="month">รายเดือน</option>
+                                        <option value="year">รายปี</option>
+                                    </select>
+                                    
+                                    {tempDateFilter.period === 'day' && (
+                                        <input type="date" value={tempDateFilter.date} onChange={e => handleDateFilterChange('date', e.target.value)} className="filter-select"/>
+                                    )}
+                                    {tempDateFilter.period === 'month' && (
+                                        <div className="flex gap-2">
+                                            <select value={tempDateFilter.month} onChange={e => handleDateFilterChange('month', parseInt(e.target.value))} className="filter-select w-full">
+                                                {MONTH_NAMES_TH.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                                            </select>
+                                            <select value={tempDateFilter.year} onChange={e => handleDateFilterChange('year', parseInt(e.target.value))} className="filter-select w-full">
+                                                {availableYears.map(y => <option key={y} value={y}>ปี {y + 543}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                    {tempDateFilter.period === 'year' && (
+                                        <select value={tempDateFilter.year} onChange={e => handleDateFilterChange('year', parseInt(e.target.value))} className="filter-select">
+                                            {availableYears.map(y => <option key={y} value={y}>ปี {y + 543}</option>)}
+                                        </select>
+                                    )}
+                                </div>
+                            </FilterSection>
+                        </main>
+                        <footer className="p-4 border-t border-gray-200 dark:border-dark-border flex-shrink-0 flex gap-3">
+                            <button onClick={handleClear} className="w-full text-center px-4 py-2.5 rounded-lg border border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-muted font-semibold transition-colors">ล้างตัวกรอง</button>
+                            <button onClick={handleApply} className="w-full text-center px-4 py-2.5 rounded-lg bg-brand-primary text-white hover:opacity-90 font-bold transition-opacity">ใช้ตัวกรอง</button>
+                        </footer>
+                    </motion.div>
+                </>
+            )}
+        </AnimatePresence>
+    )
+}
+
+const FilterSection: React.FC<{title: string; children: React.ReactNode}> = ({title, children}) => (
+    <div>
+        <h4 className="text-sm font-semibold text-gray-500 dark:text-dark-text-muted mb-2">{title}</h4>
+        {children}
+    </div>
+);
 
 
 // --- ORIGINAL COMPONENTS ---
@@ -222,7 +281,7 @@ interface TaskCardProps {
 const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggleStar, onDelete }) => {
     const assignee = teamMembers.find(m => m.id === task.assigneeId);
     const { bg, text, border } = TASK_TYPE_COLORS[task.taskType] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-400' };
-
+    
     return (
         <motion.div
             layout
@@ -298,12 +357,13 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, teamMembers, onEdit, onToggle
     );
 };
 
-
 const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<{ status: string; type: string; assignee: string }>({ status: 'all', type: 'all', assignee: 'all' });
+  const [filters, setFilters] = useState(initialFilterState);
+  const [dateFilter, setDateFilter] = useState(initialDateFilterState);
   const [sort, setSort] = useState('newest');
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
   useEffect(() => {
     if (initialFilters && Object.keys(initialFilters).length > 0) {
@@ -311,6 +371,14 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         clearInitialFilters();
     }
   }, [initialFilters, clearInitialFilters]);
+  
+  const availableYears = useMemo(() => {
+    const years = new Set(tasks.map(t => new Date(t.timestamp).getFullYear()));
+    if (!years.has(new Date().getFullYear())) {
+        years.add(new Date().getFullYear());
+    }
+    return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
     let filtered = tasks;
@@ -337,6 +405,23 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
       filtered = filtered.filter(t => t.assigneeId === filters.assignee);
     }
 
+    if (dateFilter.period !== 'all') {
+        filtered = filtered.filter(task => {
+            const dateString = dateFilter.type === 'timestamp' ? task.timestamp : task.dueDate;
+            if (dateFilter.period === 'day') {
+                return dateString.startsWith(dateFilter.date);
+            }
+            const dateToCompare = new Date(dateString); 
+            if (dateFilter.period === 'month') {
+                return dateToCompare.getUTCFullYear() === dateFilter.year && dateToCompare.getUTCMonth() === dateFilter.month;
+            }
+            if (dateFilter.period === 'year') {
+                return dateToCompare.getUTCFullYear() === dateFilter.year;
+            }
+            return true;
+        });
+    }
+
     return [...filtered].sort((a, b) => {
       switch (sort) {
         case 'newest': return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
@@ -346,7 +431,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         default: return 0;
       }
     });
-  }, [tasks, filter, searchTerm, filters, sort]);
+  }, [tasks, filter, searchTerm, filters, sort, dateFilter]);
 
   const handleToggleStar = async (taskId: string) => {
     const taskToUpdate = tasks.find(t => t.id === taskId);
@@ -360,6 +445,11 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
     await deleteTask(taskToDelete.id);
     setTaskToDelete(null);
   };
+  
+  const handleApplyFilters = (newFilters: typeof initialFilterState, newDateFilter: typeof initialDateFilterState) => {
+      setFilters(newFilters);
+      setDateFilter(newDateFilter);
+  };
 
   const getStatusPillColor = (status: TaskStatus) => {
     switch (status) {
@@ -370,49 +460,64 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         default: return 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200';
     }
   };
+  
+  const getDateFilterLabel = () => {
+    if (dateFilter.period === 'all') return '';
+    const dateTypeLabel = dateFilter.type === 'timestamp' ? 'วันที่สั่ง' : 'กำหนดส่ง';
+    if (dateFilter.period === 'day') {
+        const d = new Date(dateFilter.date);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        return `${dateTypeLabel}: ${d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    }
+    if (dateFilter.period === 'month') {
+        return `${dateTypeLabel}: ${MONTH_NAMES_TH[dateFilter.month]} ${dateFilter.year + 543}`;
+    }
+    if (dateFilter.period === 'year') {
+        return `${dateTypeLabel}: ปี ${dateFilter.year + 543}`;
+    }
+    return 'วันที่';
+  };
 
-  const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.assignee !== 'all';
+
+  const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.assignee !== 'all' || dateFilter.period !== 'all';
 
   return (
     <div>
+      <style>{`
+        .filter-select {
+          width: 100%;
+          padding: 0.75rem;
+          border-radius: 0.5rem;
+          border: 1px solid #d1d5db;
+          background-color: #f9fafb;
+          font-size: 0.875rem;
+        }
+        .dark .filter-select {
+          border-color: #4b5563;
+          background-color: #374151;
+        }
+      `}</style>
       <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-md mb-6">
-        <div className="relative mb-4">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
-          <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-            <FilterDropdown 
-                label="สถานะ"
-                icon={<FiTag size={16} />}
-                options={Object.values(TaskStatus).map(s => ({ value: s, label: s }))}
-                selectedValue={filters.status}
-                onSelect={value => setFilters({...filters, status: value})}
-            />
-            <FilterDropdown 
-                label="ประเภทงาน"
-                icon={<FiGrid size={16} />}
-                options={Object.values(TaskType).map(t => ({ value: t, label: t }))}
-                selectedValue={filters.type}
-                onSelect={value => setFilters({...filters, type: value})}
-            />
-            <FilterDropdown 
-                label="ผู้รับผิดชอบ"
-                icon={<FiUser size={16} />}
-                options={teamMembers.map(m => ({ value: m.id, label: m.name }))}
-                selectedValue={filters.assignee}
-                onSelect={value => setFilters({...filters, assignee: value})}
-            />
-            <div className="flex-grow"></div>
-            <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-500 dark:text-dark-text-muted">เรียงตาม:</span>
-                <select value={sort} onChange={e => setSort(e.target.value)} className="p-2 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-100 dark:bg-dark-muted focus:ring-brand-primary dark:focus:ring-dark-accent">
-                    <option value="newest">ใหม่สุด</option>
-                    <option value="oldest">เก่าสุด</option>
-                    <option value="dueDate">กำหนดส่ง</option>
-                    <option value="id">รหัสงาน</option>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-grow">
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
+            <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
+          </div>
+           <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => setIsFilterPanelOpen(true)} className="icon-interactive flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border">
+                    <FiFilter />
+                    ตัวกรอง
+                    {hasActiveFilters && <span className="w-2 h-2 bg-brand-primary rounded-full animate-pulse"></span>}
+                </button>
+                <select value={sort} onChange={e => setSort(e.target.value)} className="p-3 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-100 dark:bg-dark-muted focus:ring-brand-primary dark:focus:ring-dark-accent text-sm">
+                    <option value="newest">เรียง: ใหม่สุด</option>
+                    <option value="oldest">เรียง: เก่าสุด</option>
+                    <option value="dueDate">เรียง: กำหนดส่ง</option>
+                    <option value="id">เรียง: รหัสงาน</option>
                 </select>
             </div>
         </div>
+
         <AnimatePresence>
         {hasActiveFilters && (
             <motion.div 
@@ -422,7 +527,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                 className="pt-4 border-t border-gray-200 dark:border-dark-border overflow-hidden"
             >
                 <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium text-gray-500 dark:text-dark-text-muted mr-2">ตัวกรอง:</span>
+                    <span className="text-sm font-medium text-gray-500 dark:text-dark-text-muted mr-2">ตัวกรองที่ใช้:</span>
                     {filters.status !== 'all' && (
                         <ActiveFilterPill 
                             label={`สถานะ: ${filters.status}`}
@@ -442,6 +547,13 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                             label={`ผู้รับผิดชอบ: ${teamMembers.find(m => m.id === filters.assignee)?.name || ''}`}
                             onRemove={() => setFilters({...filters, assignee: 'all'})}
                             colorClasses="bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200"
+                        />
+                    )}
+                     {dateFilter.period !== 'all' && (
+                        <ActiveFilterPill 
+                            label={getDateFilterLabel()}
+                            onRemove={() => setDateFilter(initialDateFilterState)}
+                            colorClasses="bg-purple-100 text-purple-800 dark:bg-purple-500/30 dark:text-purple-200"
                         />
                     )}
                 </div>
@@ -470,6 +582,16 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
             <p>ไม่พบงานที่ตรงกับเงื่อนไข</p>
         </div>
       )}
+
+      <FilterPanel 
+        isOpen={isFilterPanelOpen}
+        onClose={() => setIsFilterPanelOpen(false)}
+        onApply={handleApplyFilters}
+        currentFilters={filters}
+        currentDateFilter={dateFilter}
+        teamMembers={teamMembers}
+        availableYears={availableYears}
+      />
 
       <AnimatePresence>
         {taskToDelete && (

@@ -408,45 +408,4 @@ const RadioOption: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { labe
     </label>
 );
 
-const FormStylesInjector = () => (
-    <style>{`
-        .form-label {
-            display: block;
-            font-size: 0.875rem; /* text-sm */
-            font-weight: 500; /* font-medium */
-            color: #374151; /* text-gray-700 */
-        }
-        .dark .form-label {
-             color: #d1d5db; /* dark:text-gray-300 */
-        }
-        .form-input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem; /* rounded-lg */
-            border-width: 1px;
-            border-color: #d1d5db; /* border-gray-300 */
-            background-color: #f9fafb; /* bg-gray-50 */
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .dark .form-input {
-            border-color: #4b5563; /* dark:border-gray-600 */
-            background-color: #374151; /* dark:bg-gray-700 */
-        }
-        /* Fix for date picker icon color in dark mode */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(var(--dark-mode-invert, 0));
-        }
-        .dark {
-            --dark-mode-invert: 1;
-        }
-    `}</style>
-)
-
-const InjectedRequestForm: React.FC<RequestFormProps> = (props) => (
-    <>
-        <FormStylesInjector />
-        <RequestForm {...props} />
-    </>
-)
-
-export default InjectedRequestForm;
+export default RequestForm;

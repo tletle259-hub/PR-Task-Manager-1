@@ -2,6 +2,7 @@ import { CalendarEvent, Task, TeamMember, TaskStatus, TaskType, Notification, No
 
 export const CALENDAR_EVENTS_STORAGE_KEY = 'pr-calendar-events';
 export const CONTACT_MESSAGES_STORAGE_KEY = 'pr-contact-messages';
+export const MONTH_NAMES_TH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
 export const MOCK_TASKS: Task[] = [
   {
