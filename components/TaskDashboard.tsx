@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiLayout } from 'react-icons/fi';
-import { Task, TeamMember, TaskStatus, TaskType } from '../types';
-import { TASK_STATUS_COLORS, TASK_TYPE_COLORS, MONTH_NAMES_TH } from '../constants';
+import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
+import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
 
 // --- NEW CONFIRMATION MODAL COMPONENT ---
@@ -119,7 +119,7 @@ const getColorForString = (str: string) => {
 
 const formatToYyyyMmDd = (date: Date) => date.toISOString().split('T')[0];
 
-const initialFilterState = { status: 'all', type: 'all', assignee: 'all' };
+const initialFilterState = { status: 'all', type: 'all', assignee: 'all', department: 'all' };
 const initialDateFilterState = {
     type: 'timestamp',
     period: 'all',
@@ -137,7 +137,9 @@ const FilterPanel: React.FC<{
     currentDateFilter: typeof initialDateFilterState;
     teamMembers: TeamMember[];
     availableYears: number[];
-}> = ({ isOpen, onClose, onApply, currentFilters, currentDateFilter, teamMembers, availableYears }) => {
+    availableDepartments: string[];
+    taskTypeConfigs: TaskTypeConfig[];
+}> = ({ isOpen, onClose, onApply, currentFilters, currentDateFilter, teamMembers, availableYears, availableDepartments, taskTypeConfigs }) => {
     const [tempFilters, setTempFilters] = useState(currentFilters);
     const [tempDateFilter, setTempDateFilter] = useState(currentDateFilter);
     
@@ -195,13 +197,19 @@ const FilterPanel: React.FC<{
                              <FilterSection title="ประเภทงาน">
                                 <select value={tempFilters.type} onChange={e => setTempFilters({...tempFilters, type: e.target.value})} className="filter-select">
                                     <option value="all">ทั้งหมด</option>
-                                    {Object.values(TaskType).map(t => <option key={t} value={t}>{t}</option>)}
+                                    {taskTypeConfigs.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                                 </select>
                             </FilterSection>
                              <FilterSection title="ผู้รับผิดชอบ">
                                 <select value={tempFilters.assignee} onChange={e => setTempFilters({...tempFilters, assignee: e.target.value})} className="filter-select">
                                     <option value="all">ทั้งหมด</option>
                                     {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                            </FilterSection>
+                             <FilterSection title="ส่วนงาน">
+                                <select value={tempFilters.department} onChange={e => setTempFilters({...tempFilters, department: e.target.value})} className="filter-select">
+                                    <option value="all">ทั้งหมด</option>
+                                    {availableDepartments.map(d => <option key={d} value={d}>{d}</option>)}
                                 </select>
                             </FilterSection>
                             <FilterSection title="วันที่">
@@ -264,16 +272,19 @@ type ViewMode = 'card' | 'list' | 'column';
 interface TaskDashboardProps {
   tasks: Task[];
   teamMembers: TeamMember[];
+  taskTypeConfigs: TaskTypeConfig[];
   filter: 'all' | 'starred';
   initialFilters: { [key: string]: string };
   clearInitialFilters: () => void;
   onSelectTask: (task: Task) => void;
 }
 
-const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; isCompact?: boolean; }> = ({ task, teamMembers, onSelectTask, onToggleStar, onDelete, isCompact = false }) => {
+const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; isCompact?: boolean; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isCompact = false }) => {
     const assignee = teamMembers.find(m => m.id === task.assigneeId);
-    const { bg, text, border } = TASK_TYPE_COLORS[task.taskType] || { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-400' };
-    
+    const config = taskTypeConfigs.find(c => c.name === task.taskType);
+    const colorHex = config?.colorHex || '#64748b'; // Default slate color
+    const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
+
     return (
         <motion.div
             layout="position"
@@ -282,13 +293,14 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: 
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
             whileHover={!isCompact ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            className={`bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden border-t-4 ${border} interactive-glow`}
+            className="bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow"
+            style={{ borderTop: `4px solid ${colorHex}` }}
         >
             <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
                     <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${bg} ${text}`}>{task.taskType}</span>
+                        <span style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-3 py-1 text-xs font-semibold rounded-full`}>{taskTypeName}</span>
                         {!isCompact && <div className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>{task.status}</div>}
                     </div>
                 </div>
@@ -354,9 +366,11 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: 
     );
 };
 
-const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; }> = ({ task, teamMembers, onSelectTask, onToggleStar, onDelete }) => {
+const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete }) => {
     const assignee = teamMembers.find(m => m.id === task.assigneeId);
-    const { bg, text } = TASK_TYPE_COLORS[task.taskType] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+    const config = taskTypeConfigs.find(c => c.name === task.taskType);
+    const colorHex = config?.colorHex || '#64748b';
+    const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
 
     return (
          <motion.div
@@ -384,7 +398,7 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTa
                  </div>
             </div>
              <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 text-sm w-full lg:w-auto lg:justify-end flex-shrink-0">
-                 <div className={`px-2 py-1 text-xs font-semibold rounded-full text-center ${bg} ${text} w-full sm:w-auto`}>{task.taskType}</div>
+                 <div style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-2 py-1 text-xs font-semibold rounded-full text-center w-full sm:w-auto`}>{taskTypeName}</div>
                  
                  <div className="flex items-center gap-2 min-w-[150px]">
                      {assignee ? (
@@ -417,7 +431,7 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; onSelectTa
     );
 };
 
-const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
+const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskTypeConfigs, filter, initialFilters, clearInitialFilters, onSelectTask }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState(initialFilterState);
   const [dateFilter, setDateFilter] = useState(initialDateFilterState);
@@ -439,6 +453,11 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         years.add(new Date().getFullYear());
     }
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
+  }, [tasks]);
+
+  const availableDepartments = useMemo(() => {
+    const departments = new Set(tasks.map(t => t.department));
+    return Array.from(departments).sort((a, b) => a.localeCompare(b, 'th'));
   }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -465,6 +484,9 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
     }
     if (filters.assignee !== 'all') {
       filtered = filtered.filter(t => t.assigneeId === filters.assignee);
+    }
+     if (filters.department !== 'all') {
+      filtered = filtered.filter(t => t.department === filters.department);
     }
 
     if (dateFilter.period !== 'all') {
@@ -541,7 +563,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
   };
 
 
-  const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.assignee !== 'all' || dateFilter.period !== 'all';
+  const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.assignee !== 'all' || dateFilter.period !== 'all' || filters.department !== 'all';
   
   const renderTasks = () => {
       if (filteredAndSortedTasks.length === 0) {
@@ -557,6 +579,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                             key={task.id}
                             task={task}
                             teamMembers={teamMembers}
+                            taskTypeConfigs={taskTypeConfigs}
                             onSelectTask={onSelectTask}
                             onToggleStar={() => handleToggleStar(task.id)}
                             onDelete={() => setTaskToDelete(task)}
@@ -586,6 +609,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                                         key={task.id}
                                         task={task}
                                         teamMembers={teamMembers}
+                                        taskTypeConfigs={taskTypeConfigs}
                                         onSelectTask={onSelectTask}
                                         onToggleStar={() => handleToggleStar(task.id)}
                                         onDelete={() => setTaskToDelete(task)}
@@ -609,6 +633,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                           key={task.id} 
                           task={task} 
                           teamMembers={teamMembers} 
+                          taskTypeConfigs={taskTypeConfigs}
                           onSelectTask={onSelectTask}
                           onToggleStar={() => handleToggleStar(task.id)}
                           onDelete={() => setTaskToDelete(task)}
@@ -687,7 +712,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                         <ActiveFilterPill 
                             label={`ประเภท: ${filters.type}`}
                             onRemove={() => setFilters({...filters, type: 'all'})}
-                            colorClasses={`${TASK_TYPE_COLORS[filters.type]?.bg || ''} ${TASK_TYPE_COLORS[filters.type]?.text || ''}`}
+                            colorClasses={`bg-gray-200 text-gray-800`}
                         />
                     )}
                     {filters.assignee !== 'all' && (
@@ -695,6 +720,13 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
                             label={`ผู้รับผิดชอบ: ${teamMembers.find(m => m.id === filters.assignee)?.name || ''}`}
                             onRemove={() => setFilters({...filters, assignee: 'all'})}
                             colorClasses="bg-blue-100 text-blue-800 dark:bg-blue-500/30 dark:text-blue-200"
+                        />
+                    )}
+                    {filters.department !== 'all' && (
+                        <ActiveFilterPill 
+                            label={`ส่วนงาน: ${filters.department}`}
+                            onRemove={() => setFilters({...filters, department: 'all'})}
+                            colorClasses="bg-indigo-100 text-indigo-800 dark:bg-indigo-500/30 dark:text-indigo-200"
                         />
                     )}
                      {dateFilter.period !== 'all' && (
@@ -729,6 +761,8 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, filte
         currentDateFilter={dateFilter}
         teamMembers={teamMembers}
         availableYears={availableYears}
+        availableDepartments={availableDepartments}
+        taskTypeConfigs={taskTypeConfigs}
       />
 
       <AnimatePresence>

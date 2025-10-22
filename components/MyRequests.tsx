@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFileText, FiClock, FiCalendar, FiBriefcase, FiSearch, FiFilter, FiX } from 'react-icons/fi';
-import { Task, TaskStatus, TaskType } from '../types';
+import { Task, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 
 interface MyRequestsProps {
   tasks: Task[];
   userEmail: string;
+  taskTypeConfigs: TaskTypeConfig[];
 }
 
 // --- NEW FILTER PANEL COMPONENT ---
@@ -16,7 +17,8 @@ const FilterPanel: React.FC<{
     onApply: (filters: { status: string; type: string; sortOrder: string }) => void;
     initialFilters: { status: string; type: string; sortOrder: string };
     isStatusVisible: boolean;
-}> = ({ isOpen, onClose, onApply, initialFilters, isStatusVisible }) => {
+    taskTypeConfigs: TaskTypeConfig[];
+}> = ({ isOpen, onClose, onApply, initialFilters, isStatusVisible, taskTypeConfigs }) => {
     const [tempFilters, setTempFilters] = useState(initialFilters);
 
     useEffect(() => {
@@ -81,8 +83,8 @@ const FilterPanel: React.FC<{
                                 <label htmlFor="typeFilter" className="form-label">ประเภทงาน</label>
                                  <select id="typeFilter" value={tempFilters.type} onChange={e => setTempFilters({...tempFilters, type: e.target.value})} className="filter-select mt-1">
                                      <option value="all">ทั้งหมด</option>
-                                     {Object.values(TaskType).map(type => (
-                                         <option key={type} value={type}>{type}</option>
+                                     {taskTypeConfigs.map(config => (
+                                         <option key={config.id} value={config.name}>{config.name}</option>
                                      ))}
                                 </select>
                             </div>
@@ -99,7 +101,7 @@ const FilterPanel: React.FC<{
 };
 
 
-const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
+const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail, taskTypeConfigs }) => {
   const [userTasks, setUserTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   
@@ -166,6 +168,7 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
   };
 
   const hasActiveFilters = filters.status !== 'all' || filters.type !== 'all' || filters.sortOrder !== 'newest';
+  const otherTaskTypeName = "งานชนิดอื่นๆ";
 
   return (
     <div>
@@ -252,7 +255,7 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">{task.taskDescription}</p>
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
-                <span className="flex items-center gap-2"><FiFileText /> <strong>ประเภท:</strong> {task.taskType}</span>
+                <span className="flex items-center gap-2"><FiFileText /> <strong>ประเภท:</strong> {task.taskType === otherTaskTypeName ? task.otherTaskTypeName : task.taskType}</span>
                 <span className="flex items-center gap-2"><FiClock /> <strong>วันที่แจ้ง:</strong> {new Date(task.timestamp).toLocaleDateString('th-TH')}</span>
                 <span className="flex items-center gap-2"><FiCalendar /> <strong>กำหนดส่ง:</strong> {new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
                 </div>
@@ -266,6 +269,7 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail }) => {
         onApply={handleApplyFilters}
         initialFilters={filters}
         isStatusVisible={isStatusVisible}
+        taskTypeConfigs={taskTypeConfigs}
       />
     </div>
   );

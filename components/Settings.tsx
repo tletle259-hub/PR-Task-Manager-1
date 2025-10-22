@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
-import { Department } from '../types';
-import { onDepartmentsUpdate, addDepartment, updateDepartment, deleteDepartment } from '../services/departmentService';
+import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle, FiTag, FiClock, FiList } from 'react-icons/fi';
+import { Department, TaskTypeConfig } from '../types';
+import { onDepartmentsUpdate, addDepartment, updateDepartment, deleteDepartment, onTaskTypeConfigsUpdate, addTaskTypeConfig, updateTaskTypeConfig, deleteTaskTypeConfig } from '../services/departmentService';
 
 
 // --- CONFIRMATION MODAL COMPONENT ---
@@ -181,6 +181,133 @@ const DepartmentManager: React.FC = () => {
 };
 
 
+const TaskTypeManager: React.FC = () => {
+    const [configs, setConfigs] = useState<TaskTypeConfig[]>([]);
+    const [newConfig, setNewConfig] = useState({ name: '', dailyLimit: '', leadTimeDays: '' });
+    const [editingConfig, setEditingConfig] = useState<TaskTypeConfig | null>(null);
+    const [configToDelete, setConfigToDelete] = useState<TaskTypeConfig | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = onTaskTypeConfigsUpdate(setConfigs);
+        return () => unsubscribe();
+    }, []);
+
+    const handleAdd = async () => {
+        if (newConfig.name.trim()) {
+            await addTaskTypeConfig({
+                name: newConfig.name.trim(),
+                dailyLimit: newConfig.dailyLimit ? parseInt(newConfig.dailyLimit, 10) : null,
+                leadTimeDays: newConfig.leadTimeDays ? parseInt(newConfig.leadTimeDays, 10) : null,
+            });
+            setNewConfig({ name: '', dailyLimit: '', leadTimeDays: '' });
+        }
+    };
+
+    const handleUpdate = async () => {
+        if (editingConfig && editingConfig.name.trim()) {
+            await updateTaskTypeConfig(editingConfig.id, {
+                name: editingConfig.name.trim(),
+                dailyLimit: editingConfig.dailyLimit ? Number(editingConfig.dailyLimit) : null,
+                leadTimeDays: editingConfig.leadTimeDays ? Number(editingConfig.leadTimeDays) : null,
+            });
+            setEditingConfig(null);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (configToDelete) {
+            await deleteTaskTypeConfig(configToDelete.id);
+            setConfigToDelete(null);
+        }
+    };
+    
+    const handleNumberInputChange = (setter: React.Dispatch<React.SetStateAction<any>>, field: string, value: string) => {
+        const parsed = parseInt(value, 10);
+        if (value === '' || (!isNaN(parsed) && parsed >= 0)) {
+            setter((prev: any) => ({ ...prev, [field]: value }));
+        }
+    };
+
+    return (
+        <SettingsSection icon={<FiTag size={24} />} title="จัดการประเภทงานที่ประสงค์รับบริการ">
+            <p className="text-sm text-gray-500 dark:text-gray-400 -mt-3 mb-4">
+                กำหนดประเภทงาน, โควต้ารายวัน, และระยะเวลาทำงานขั้นต่ำสำหรับผู้สั่งงาน
+            </p>
+            <div className="p-4 bg-gray-50 dark:bg-dark-muted/20 rounded-lg border dark:border-gray-700">
+                <h4 className="font-semibold mb-2">เพิ่มประเภทงานใหม่</h4>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                    <div className="md:col-span-2">
+                        <label className="text-xs font-medium">ชื่อประเภทงาน</label>
+                        <input type="text" value={newConfig.name} onChange={e => setNewConfig({...newConfig, name: e.target.value})} placeholder="เช่น ออกแบบ Infographic" className="form-input mt-1"/>
+                    </div>
+                    <div>
+                         <label className="text-xs font-medium">โควต้า/วัน (ชิ้น)</label>
+                        <input type="number" value={newConfig.dailyLimit} onChange={e => handleNumberInputChange(setNewConfig, 'dailyLimit', e.target.value)} placeholder="ไม่กำหนด" className="form-input mt-1"/>
+                    </div>
+                     <div>
+                         <label className="text-xs font-medium">ระยะเวลา (วัน)</label>
+                        <input type="number" value={newConfig.leadTimeDays} onChange={e => handleNumberInputChange(setNewConfig, 'leadTimeDays', e.target.value)} placeholder="ไม่กำหนด" className="form-input mt-1"/>
+                    </div>
+                </div>
+                 <button onClick={handleAdd} className="mt-3 w-full md:w-auto icon-interactive bg-brand-primary text-white font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                    <FiPlus /> เพิ่มประเภทงาน
+                </button>
+            </div>
+            
+            <div className="space-y-2 max-h-96 overflow-y-auto border-t dark:border-gray-700 mt-4 pt-4">
+                {configs.map(config => (
+                    <div key={config.id} className={`p-2 rounded-lg ${editingConfig?.id === config.id ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500' : 'bg-gray-50 dark:bg-dark-muted/30'}`}>
+                        {editingConfig?.id === config.id ? (
+                             <div className="space-y-3 p-2">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                    <input type="text" value={editingConfig.name} onChange={e => setEditingConfig({...editingConfig, name: e.target.value})} className="form-input md:col-span-3"/>
+                                    <input type="number" value={editingConfig.dailyLimit || ''} onChange={e => handleNumberInputChange(setEditingConfig, 'dailyLimit', e.target.value)} placeholder="โควต้า/วัน" className="form-input" />
+                                    <input type="number" value={editingConfig.leadTimeDays || ''} onChange={e => handleNumberInputChange(setEditingConfig, 'leadTimeDays', e.target.value)} placeholder="ระยะเวลา (วัน)" className="form-input"/>
+                                </div>
+                                <div className="flex justify-end gap-2">
+                                     <button onClick={() => setEditingConfig(null)} className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600/50 rounded-full"><FiXCircle /></button>
+                                     <button onClick={handleUpdate} className="p-2 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-full"><FiSave /></button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-between p-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-4 h-4 rounded-sm" style={{backgroundColor: config.colorHex}}></div>
+                                    <span className="font-semibold truncate">{config.name}</span>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                                    <span className="flex items-center gap-1.5" title="โควต้ารับงานต่อวัน"><FiList/> {config.dailyLimit ?? 'N/A'}</span>
+                                    <span className="flex items-center gap-1.5" title="ระยะเวลาทำงานขั้นต่ำ"><FiClock/> {config.leadTimeDays ?? 'N/A'}</span>
+                                    {config.isEditable ? (
+                                        <div className="flex gap-1 flex-shrink-0">
+                                            <button onClick={() => setEditingConfig(config)} className="p-2 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit /></button>
+                                            <button onClick={() => setConfigToDelete(config)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
+                                        </div>
+                                    ) : <div className="w-[64px]"></div> }
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+             <AnimatePresence>
+                {configToDelete && (
+                    <ConfirmationModal
+                        onClose={() => setConfigToDelete(null)}
+                        onConfirm={handleDelete}
+                        title="ยืนยันการลบประเภทงาน"
+                        message={<>คุณแน่ใจหรือไม่ว่าต้องการลบประเภทงาน: <strong className="font-semibold text-gray-900 dark:text-dark-text">"{configToDelete.name}"</strong>? การกระทำนี้ไม่สามารถย้อนกลับได้ และอาจส่งผลต่อการกรองงานเก่า</>}
+                        confirmText="ยืนยันการลบ"
+                        cancelText="ยกเลิก"
+                        warningLevel="danger"
+                    />
+                )}
+             </AnimatePresence>
+        </SettingsSection>
+    )
+};
+
+
 const SettingsSection: React.FC<{ icon: React.ReactNode; title: string; children: React.ReactNode; }> = ({ icon, title, children }) => (
     <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
         <h3 className="text-xl font-bold mb-4 flex items-center gap-3"><span className="text-brand-primary dark:text-dark-accent">{icon}</span> {title}</h3>
@@ -291,6 +418,8 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
                 </button>
             </div>
         </SettingsSection>
+        
+        <TaskTypeManager />
 
         <DepartmentManager />
 
@@ -298,7 +427,7 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
             <div className="text-gray-600 dark:text-dark-text-muted">
                 <p><strong>ระบบจัดการงาน ส่วนงานสื่อสารองค์กร</strong></p>
                 <p>สภาวิชาชีพบัญชี ในพระบรมราชูปถัมภ์</p>
-                <p className="mt-2">เวอร์ชั่น 1.1.0</p>
+                <p className="mt-2">เวอร์ชั่น 1.2.0</p>
                 <p>© 2025 Nattakit Chotikorn</p>
             </div>
         </SettingsSection>

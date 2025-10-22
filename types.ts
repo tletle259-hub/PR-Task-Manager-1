@@ -5,6 +5,8 @@ export enum TaskStatus {
   CANCELLED = 'ยกเลิก',
 }
 
+// This enum is now deprecated for UI components and is only used for the initial data seeding.
+// All UI components should use the dynamic TaskTypeConfig collection from Firestore.
 export enum TaskType {
   BROCHURE = 'โบรชัวร์',
   BANNER = 'แบนเนอร์',
@@ -47,7 +49,7 @@ export interface Task {
   department: string;
   taskTitle: string;
   taskDescription: string;
-  taskType: TaskType;
+  taskType: string; // Changed from TaskType enum to string
   dueDate: string;
   attachments: Attachment[];
   assigneeId: string | null;
@@ -66,6 +68,17 @@ export interface Task {
   projectId?: string;
   projectName?: string;
 }
+
+// New SubTask interface for project-based forms
+export interface SubTask {
+  id: string;
+  taskType: string;
+  otherTaskTypeName: string;
+  taskTitle: string;
+  taskDescription: string;
+  dueDate: string;
+}
+
 
 export interface TeamMember {
   id: string; // Document ID, e.g., TM01
@@ -130,4 +143,14 @@ export interface ContactMessage {
 export interface Department {
   id: string;
   name: string;
+}
+
+export interface TaskTypeConfig {
+  id: string;
+  name: string;
+  dailyLimit: number | null;
+  leadTimeDays: number | null;
+  colorHex: string;
+  isEditable: boolean;
+  order: number;
 }

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut, FiAlertTriangle } from 'react-icons/fi';
-import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage, NotificationType } from './types';
+import { Task, TeamMember, User, TaskStatus, Notification, ContactMessage, NotificationType, TaskTypeConfig } from './types';
 import { onTasksUpdate, updateTask } from './services/taskService';
 import { onTeamMembersUpdate, addTeamMember, updateTeamMember, deleteTeamMember } from './services/secureIdService';
 import { onNotificationsUpdate, saveNotifications, addNotification } from './services/notificationService';
 import { onContactMessagesUpdate, updateContactMessage, deleteContactMessage, deleteAllContactMessages } from './services/contactService';
 import { onUsersUpdate, updateUser as updateUserService, deleteUser as deleteUserService } from './services/userService';
+import { onTaskTypeConfigsUpdate } from './services/departmentService';
 import { seedInitialData } from './services/seedService';
 
 import Header from './components/Header';
@@ -285,6 +286,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
   const [users, setUsers] = useState<User[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [taskTypeConfigs, setTaskTypeConfigs] = useState<TaskTypeConfig[]>([]);
   const [view, setView] = useState<View>('dashboard');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeFilters, setActiveFilters] = useState<{[key: string]: string}>({});
@@ -324,15 +326,13 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     }
   };
 
-  // Fix: Combined and corrected the two useEffect hooks into one.
-  // This resolves multiple compilation errors related to incorrect hook structure,
-  // dependency arrays, and variable scoping for cleanup functions.
   useEffect(() => {
     let unsubTasks: () => void;
     let unsubMembers: () => void;
     let unsubNotifications: () => void;
     let unsubMessages: () => void;
     let unsubUsers: () => void;
+    let unsubConfigs: () => void;
 
     seedInitialData().then(() => {
         unsubTasks = onTasksUpdate(newTasks => {
@@ -361,6 +361,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
         unsubNotifications = onNotificationsUpdate(setNotifications);
         unsubMessages = onContactMessagesUpdate(setContactMessages);
         unsubUsers = onUsersUpdate(setUsers);
+        unsubConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
         
         setIsLoading(false);
     });
@@ -371,6 +372,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
         if (unsubNotifications) unsubNotifications();
         if (unsubMessages) unsubMessages();
         if (unsubUsers) unsubUsers();
+        if (unsubConfigs) unsubConfigs();
     };
   }, []);
   
@@ -489,6 +491,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
         return <OverviewDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
+                  taskTypeConfigs={taskTypeConfigs}
                   onSetFilters={handleSetFilters}
                   onSelectTask={setSelectedTask} 
                 />;
@@ -496,6 +499,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
+                  taskTypeConfigs={taskTypeConfigs}
                   filter="all" 
                   initialFilters={activeFilters}
                   clearInitialFilters={() => setActiveFilters({})}
@@ -510,6 +514,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
         return <TaskDashboard 
                   tasks={tasks} 
                   teamMembers={teamMembers} 
+                  taskTypeConfigs={taskTypeConfigs}
                   filter="starred" 
                   initialFilters={{}}
                   clearInitialFilters={() => {}}
@@ -538,7 +543,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
       case 'settings':
         return <Settings theme={theme} toggleTheme={toggleTheme} />;
       default:
-        return <OverviewDashboard tasks={tasks} teamMembers={teamMembers} onSetFilters={handleSetFilters} onSelectTask={setSelectedTask}/>;
+        return <OverviewDashboard tasks={tasks} teamMembers={teamMembers} onSetFilters={handleSetFilters} onSelectTask={setSelectedTask} taskTypeConfigs={taskTypeConfigs}/>;
     }
   };
 

@@ -2,8 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiArchive, FiCheckCircle, FiClock, FiLoader, FiUsers, FiXCircle, FiUser, FiDownload } from 'react-icons/fi';
-import { Task, TeamMember, TaskStatus, TaskType } from '../types';
-import { TASK_TYPE_COLORS } from '../constants';
+import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 
 // --- HELPER FUNCTIONS ---
 const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
@@ -22,6 +21,7 @@ const MONTH_NAMES_TH = ["มกราคม", "กุมภาพันธ์", 
 interface OverviewDashboardProps {
   tasks: Task[];
   teamMembers: TeamMember[];
+  taskTypeConfigs: TaskTypeConfig[];
   onSetFilters: (filters: { [key: string]: string }) => void;
   onSelectTask: (task: Task) => void;
 }
@@ -61,7 +61,7 @@ const getColorForString = (str: string) => {
 };
 
 
-const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMembers, onSetFilters, onSelectTask }) => {
+const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMembers, taskTypeConfigs, onSetFilters, onSelectTask }) => {
   const [filterMode, setFilterMode] = useState<'all' | 'year' | 'month' | 'day'>('all');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -109,11 +109,11 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
     { name: TaskStatus.CANCELLED, value: cancelledTasks, color: '#ef4444' },
   ];
 
-  const taskTypeData = Object.values(TaskType)
-    .map(type => ({
-      name: type,
-      count: filteredTasks.filter(t => t.taskType === type).length,
-      fill: TASK_TYPE_COLORS[type]?.hex || '#8884d8',
+  const taskTypeData = taskTypeConfigs
+    .map(config => ({
+      name: config.name,
+      count: filteredTasks.filter(t => t.taskType === config.name).length,
+      fill: config.colorHex,
     }))
     .filter(item => item.count > 0);
   

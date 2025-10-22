@@ -4,8 +4,9 @@ import { FiFilePlus, FiList, FiSettings, FiLogOut, FiSun, FiMoon, FiMenu, FiAler
 import RequestForm from './components/RequestForm';
 import MyRequests from './components/MyRequests';
 import RequesterSettings from './components/RequesterSettings';
-import { Task } from './types';
+import { Task, TaskTypeConfig } from './types';
 import { addTask, onTasksUpdate } from './services/taskService';
+import { onTaskTypeConfigsUpdate } from './services/departmentService';
 import { RequesterProfile } from './App';
 import ContactWidget from './components/ChatBot';
 
@@ -163,13 +164,18 @@ const SidebarContent: React.FC<{
 const RequestApp: React.FC<RequestAppProps> = ({ currentUser, onLogout, theme, toggleTheme, onProfileUpdate }) => {
   const [view, setView] = useState<RequesterView>('form');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [taskTypeConfigs, setTaskTypeConfigs] = useState<TaskTypeConfig[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onTasksUpdate(setTasks);
-    return () => unsubscribe();
+    const unsubscribeTasks = onTasksUpdate(setTasks);
+    const unsubscribeConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
+    return () => {
+        unsubscribeTasks();
+        unsubscribeConfigs();
+    };
   }, []);
 
   const handleTaskAdded = async (tasksToAdd: Task | Task[]) => {
@@ -194,12 +200,12 @@ const RequestApp: React.FC<RequestAppProps> = ({ currentUser, onLogout, theme, t
   const renderView = () => {
     switch (view) {
       case 'requests':
-        return <MyRequests tasks={tasks} userEmail={userEmail} />;
+        return <MyRequests tasks={tasks} userEmail={userEmail} taskTypeConfigs={taskTypeConfigs} />;
       case 'settings':
           return <RequesterSettings user={currentUser} onProfileUpdate={onProfileUpdate} />;
       case 'form':
       default:
-        return <RequestForm onTaskAdded={handleTaskAdded} tasks={tasks} user={currentUser} />;
+        return <RequestForm onTaskAdded={handleTaskAdded} tasks={tasks} user={currentUser} taskTypeConfigs={taskTypeConfigs} />;
     }
   };
 
