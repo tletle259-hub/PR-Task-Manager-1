@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare } from 'react-icons/fi';
+import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle } from 'react-icons/fi';
+import { Department } from '../types';
+import { onDepartmentsUpdate, addDepartment, updateDepartment, deleteDepartment } from '../services/departmentService';
+
 
 // --- CONFIRMATION MODAL COMPONENT ---
 interface ConfirmationModalProps {
@@ -10,6 +13,7 @@ interface ConfirmationModalProps {
   message: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
+  warningLevel?: 'info' | 'danger';
 }
 
 const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -19,7 +23,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   message,
   confirmText = 'ยืนยัน',
   cancelText = 'ยกเลิก',
+  warningLevel = 'info'
 }) => {
+  const isDanger = warningLevel === 'danger';
   return (
     <motion.div
       key="confirm-modal-backdrop"
@@ -41,8 +47,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       >
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 dark:bg-yellow-900/50 sm:mx-0 sm:h-10 sm:w-10">
-              <FiAlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" aria-hidden="true" />
+            <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${isDanger ? 'bg-red-100 dark:bg-red-900/50' : 'bg-yellow-100 dark:bg-yellow-900/50'} sm:mx-0 sm:h-10 sm:w-10`}>
+              <FiAlertTriangle className={`h-6 w-6 ${isDanger ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`} aria-hidden="true" />
             </div>
             <div className="mt-0 text-left flex-grow">
               <h3 className="text-lg leading-6 font-bold text-gray-900 dark:text-dark-text" id="modal-title">
@@ -59,7 +65,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <footer className="px-6 py-4 bg-gray-50 dark:bg-dark-card/50 flex flex-row-reverse gap-3 rounded-b-2xl">
           <button
             type="button"
-            className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-primary text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm transition-colors"
+            className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:ml-3 sm:w-auto sm:text-sm transition-colors ${isDanger ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-brand-primary hover:bg-blue-700 focus:ring-blue-500'}`}
             onClick={onConfirm}
           >
             {confirmText}
@@ -75,6 +81,103 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       </motion.div>
     </motion.div>
   );
+};
+
+
+const DepartmentManager: React.FC = () => {
+    const [departments, setDepartments] = useState<Department[]>([]);
+    const [newDepartmentName, setNewDepartmentName] = useState('');
+    const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+    const [departmentToDelete, setDepartmentToDelete] = useState<Department | null>(null);
+
+    useEffect(() => {
+        const unsubscribe = onDepartmentsUpdate(setDepartments);
+        return () => unsubscribe();
+    }, []);
+
+    const handleAdd = async () => {
+        if (newDepartmentName.trim()) {
+            await addDepartment(newDepartmentName.trim());
+            setNewDepartmentName('');
+        }
+    };
+
+    const handleUpdate = async () => {
+        if (editingDepartment && editingDepartment.name.trim()) {
+            await updateDepartment(editingDepartment.id, editingDepartment.name.trim());
+            setEditingDepartment(null);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (departmentToDelete) {
+            await deleteDepartment(departmentToDelete.id);
+            setDepartmentToDelete(null);
+        }
+    };
+
+    return (
+        <SettingsSection icon={<FiBookOpen size={24} />} title="จัดการส่วนงาน">
+            <div className="flex flex-col sm:flex-row gap-2">
+                <input 
+                    type="text" 
+                    value={newDepartmentName} 
+                    onChange={e => setNewDepartmentName(e.target.value)}
+                    placeholder="เพิ่มส่วนงานใหม่..."
+                    className="form-input flex-grow"
+                />
+                <button onClick={handleAdd} className="w-full sm:w-auto icon-interactive bg-brand-primary text-white font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                    <FiPlus /> เพิ่ม
+                </button>
+            </div>
+            
+            <div className="space-y-2 max-h-72 overflow-y-auto border-t border-b dark:border-gray-700 my-4 py-2">
+                {departments.map(dept => (
+                    <div key={dept.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-dark-muted/30 rounded-lg">
+                        {editingDepartment?.id === dept.id ? (
+                            <input 
+                                type="text"
+                                value={editingDepartment.name}
+                                autoFocus
+                                onBlur={handleUpdate}
+                                onKeyDown={(e) => e.key === 'Enter' && handleUpdate()}
+                                onChange={e => setEditingDepartment({...editingDepartment, name: e.target.value})}
+                                className="form-input !py-1"
+                            />
+                        ) : (
+                            <span className="truncate pr-2">{dept.name}</span>
+                        )}
+                        <div className="flex gap-1 flex-shrink-0">
+                            {editingDepartment?.id === dept.id ? (
+                                <>
+                                    <button onClick={handleUpdate} className="p-2 text-green-500 hover:bg-green-100 dark:hover:bg-green-900/50 rounded-full"><FiSave /></button>
+                                    <button onClick={() => setEditingDepartment(null)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded-full"><FiXCircle /></button>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={() => setEditingDepartment(dept)} className="p-2 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit /></button>
+                                    <button onClick={() => setDepartmentToDelete(dept)} className="p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+             <AnimatePresence>
+                {departmentToDelete && (
+                    <ConfirmationModal
+                        onClose={() => setDepartmentToDelete(null)}
+                        onConfirm={handleDelete}
+                        title="ยืนยันการลบส่วนงาน"
+                        message={<>คุณแน่ใจหรือไม่ว่าต้องการลบส่วนงาน: <strong className="font-semibold text-gray-900 dark:text-dark-text">"{departmentToDelete.name}"</strong>? การกระทำนี้ไม่สามารถย้อนกลับได้</>}
+                        confirmText="ยืนยันการลบ"
+                        cancelText="ยกเลิก"
+                        warningLevel="danger"
+                    />
+                )}
+             </AnimatePresence>
+        </SettingsSection>
+    );
 };
 
 
@@ -124,6 +227,7 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+        <style>{`.form-input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background-color: #f9fafb; } .dark .form-input { border-color: #4b5563; background-color: #374151; }`}</style>
         <h2 className="text-3xl font-bold">ตั้งค่า</h2>
         
         <SettingsSection icon={<FiEye size={24} />} title="ลักษณะที่ปรากฏและการแจ้งเตือน">
@@ -188,6 +292,7 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
             </div>
         </SettingsSection>
 
+        <DepartmentManager />
 
         <SettingsSection icon={<FiInfo size={24} />} title="เกี่ยวกับระบบ">
             <div className="text-gray-600 dark:text-dark-text-muted">

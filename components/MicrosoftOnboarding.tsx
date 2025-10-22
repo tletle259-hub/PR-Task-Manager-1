@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User } from '../types';
+import { User, Department } from '../types';
 import { AccountInfo } from '@azure/msal-browser';
 import { FiUser, FiBriefcase, FiCheckCircle } from 'react-icons/fi';
+import { onDepartmentsUpdate } from '../services/departmentService';
+import SearchableDropdown from './SearchableDropdown';
 
 interface MicrosoftOnboardingProps {
     msalAccount: AccountInfo;
@@ -39,13 +41,21 @@ const MicrosoftOnboarding: React.FC<MicrosoftOnboardingProps> = ({ msalAccount, 
         department: '',
     });
     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [departments, setDepartments] = useState<string[]>([]);
+
+    useEffect(() => {
+        const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+            setDepartments(depts.map(d => d.name));
+        });
+        return () => unsubscribe();
+    }, []);
 
     const validate = () => {
         const newErrors: { [key: string]: string } = {};
         if (!formData.firstNameTh) newErrors.firstNameTh = "กรุณากรอกชื่อจริง";
         if (!formData.lastNameTh) newErrors.lastNameTh = "กรุณากรอกนามสกุล";
         if (!formData.position) newErrors.position = "กรุณากรอกตำแหน่ง";
-        if (!formData.department) newErrors.department = "กรุณากรอกส่วนงาน";
+        if (!formData.department) newErrors.department = "กรุณาเลือกส่วนงาน";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -89,7 +99,20 @@ const MicrosoftOnboarding: React.FC<MicrosoftOnboardingProps> = ({ msalAccount, 
                              <InputField label="ชื่อ (ภาษาอังกฤษ)" id="firstNameEn" icon={<FiUser />} name="firstNameEn" value={formData.firstNameEn} onChange={handleChange} error={errors.firstNameEn} />
                             <InputField label="นามสกุล (ภาษาอังกฤษ)" id="lastNameEn" icon={<FiUser />} name="lastNameEn" value={formData.lastNameEn} onChange={handleChange} error={errors.lastNameEn} />
                             <InputField label="ตำแหน่ง *" id="position" icon={<FiBriefcase />} name="position" value={formData.position} onChange={handleChange} error={errors.position} />
-                            <InputField label="ส่วนงาน *" id="department" icon={<FiBriefcase />} name="department" value={formData.department} onChange={handleChange} error={errors.department} />
+                             <div>
+                                <label htmlFor="department" className="form-label mb-1">ส่วนงาน *</label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><FiBriefcase /></span>
+                                    <SearchableDropdown
+                                        name="department"
+                                        options={departments}
+                                        value={formData.department}
+                                        onChange={(value) => setFormData(prev => ({...prev, department: value}))}
+                                        error={errors.department}
+                                        placeholder="เลือกส่วนงาน"
+                                    />
+                                </div>
+                            </div>
                         </div>
                         
                         <div className="flex justify-end gap-3 pt-4">

@@ -126,3 +126,8 @@ export interface ContactMessage {
   timestamp: string;
   isRead: boolean;
 }
+
+export interface Department {
+  id: string;
+  name: string;
+}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiUserPlus, FiUser, FiLock, FiEye, FiEyeOff, FiChevronLeft, FiSun, FiMoon, FiMail, FiBriefcase } from 'react-icons/fi';
-import { User } from '../types';
+import { User, Department } from '../types';
 import { registerUser } from '../services/authService';
+import { onDepartmentsUpdate } from '../services/departmentService';
+import SearchableDropdown from './SearchableDropdown';
 
 interface RequesterRegisterProps {
   onRegisterSuccess: (user: User) => void;
@@ -38,6 +40,14 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+      setDepartments(depts.map(d => d.name));
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const { firstNameEn, lastNameEn } = formData;
@@ -56,7 +66,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
     if (!formData.firstNameEn) newErrors.firstNameEn = "กรุณากรอกชื่อ (ภาษาอังกฤษ)";
     if (!formData.lastNameEn) newErrors.lastNameEn = "กรุณากรอกนามสกุล (ภาษาอังกฤษ)";
     if (!formData.position) newErrors.position = "กรุณากรอกตำแหน่ง";
-    if (!formData.department) newErrors.department = "กรุณากรอกส่วนงาน";
+    if (!formData.department) newErrors.department = "กรุณาเลือกส่วนงาน";
     if (!formData.email) {
         newErrors.email = "กรุณากรอกอีเมล";
     } else if (!formData.email.endsWith('@tfac.or.th')) {
@@ -130,7 +140,19 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
                     <InputField icon={<FiUser />} placeholder="ชื่อ (ภาษาอังกฤษ)" name="firstNameEn" value={formData.firstNameEn} onChange={handleChange} error={errors.firstNameEn} />
                     <InputField icon={<FiUser />} placeholder="นามสกุล (ภาษาอังกฤษ)" name="lastNameEn" value={formData.lastNameEn} onChange={handleChange} error={errors.lastNameEn} />
                     <InputField icon={<FiBriefcase />} placeholder="ตำแหน่ง" name="position" value={formData.position} onChange={handleChange} error={errors.position} />
-                    <InputField icon={<FiBriefcase />} placeholder="ส่วนงาน" name="department" value={formData.department} onChange={handleChange} error={errors.department} />
+                    <div>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><FiBriefcase /></span>
+                            <SearchableDropdown
+                                name="department"
+                                options={departments}
+                                value={formData.department}
+                                onChange={(value) => setFormData(prev => ({...prev, department: value}))}
+                                error={errors.department}
+                                placeholder="ส่วนงาน"
+                            />
+                        </div>
+                    </div>
                 </div>
                 <InputField icon={<FiMail />} type="email" placeholder="อีเมล" name="email" value={formData.email} onChange={handleChange} error={errors.email} />
                 

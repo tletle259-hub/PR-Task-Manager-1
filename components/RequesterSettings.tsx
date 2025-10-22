@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FiUser, FiLock, FiSave, FiInfo, FiMail, FiBriefcase, FiEye, FiEyeOff } from 'react-icons/fi';
 import { RequesterProfile } from '../App';
-import { User } from '../types';
+import { User, Department } from '../types';
 import { updateUser, getUserByMsalAccountId } from '../services/userService';
 import { loginWithMicrosoft } from '../services/authService';
+import { onDepartmentsUpdate } from '../services/departmentService';
+import SearchableDropdown from './SearchableDropdown';
 
 
 interface RequesterSettingsProps {
@@ -21,6 +23,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
+    const [departments, setDepartments] = useState<string[]>([]);
 
     useEffect(() => {
         if (isCustomUser) {
@@ -36,6 +39,21 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
             });
         }
     }, [user, isCustomUser]);
+
+    useEffect(() => {
+        const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+            setDepartments(depts.map(d => d.name));
+        });
+        return () => unsubscribe();
+    }, []);
+    
+    const departmentOptions = useMemo(() => {
+        const optionSet = new Set(departments);
+        if (formData.department && !optionSet.has(formData.department)) {
+            optionSet.add(formData.department);
+        }
+        return Array.from(optionSet).sort();
+    }, [departments, formData.department]);
     
     useEffect(() => {
         const { firstNameEn, lastNameEn } = formData;
@@ -163,7 +181,19 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
                     <InputField label="ชื่อ (ภาษาอังกฤษ)" name="firstNameEn" value={formData.firstNameEn || ''} onChange={handleProfileChange} icon={<FiUser />} />
                     <InputField label="นามสกุล (ภาษาอังกฤษ)" name="lastNameEn" value={formData.lastNameEn || ''} onChange={handleProfileChange} icon={<FiUser />} />
                     <InputField label="ตำแหน่ง" name="position" value={formData.position || ''} onChange={handleProfileChange} icon={<FiBriefcase />} />
-                    <InputField label="ส่วนงาน" name="department" value={formData.department || ''} onChange={handleProfileChange} icon={<FiBriefcase />} />
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่วนงาน</label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><FiBriefcase /></span>
+                             <SearchableDropdown
+                                name="department"
+                                options={departmentOptions}
+                                value={formData.department || ''}
+                                onChange={(value) => setFormData(prev => ({...prev, department: value}))}
+                                placeholder="เลือกส่วนงาน"
+                            />
+                        </div>
+                    </div>
                 </div>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField label="อีเมล" name="email" value={formData.email || ''} readOnly icon={<FiMail/>} />

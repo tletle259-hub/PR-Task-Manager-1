@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEdit, FiTrash2, FiSave, FiXCircle, FiKey, FiUser, FiAlertTriangle, FiSearch, FiMail, FiBriefcase } from 'react-icons/fi';
-import { User } from '../types';
+import { User, Department } from '../types';
+import { onDepartmentsUpdate } from '../services/departmentService';
+import SearchableDropdown from './SearchableDropdown';
 
 // --- CONFIRMATION MODAL COMPONENT ---
 interface ConfirmationModalProps {
@@ -108,6 +110,22 @@ const RequesterManager: React.FC<RequesterManagerProps> = ({ users, updateUser, 
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<(User & { newPassword?: string }) | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+        setDepartments(depts.map(d => d.name));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const departmentOptions = useMemo(() => {
+    const optionSet = new Set(departments);
+    if (editingUser?.department && !optionSet.has(editingUser.department)) {
+        optionSet.add(editingUser.department);
+    }
+    return Array.from(optionSet).sort();
+  }, [departments, editingUser]);
 
   useEffect(() => {
     // This effect derives the username from the English names when editing
@@ -235,7 +253,15 @@ const RequesterManager: React.FC<RequesterManagerProps> = ({ users, updateUser, 
                         <InputField label="ชื่อ (ภาษาอังกฤษ)" id={`edit-fn-en-${user.id}`} value={editingUser.firstNameEn} onChange={(e) => setEditingUser({ ...editingUser, firstNameEn: e.target.value })} required />
                         <InputField label="นามสกุล (ภาษาอังกฤษ)" id={`edit-ln-en-${user.id}`} value={editingUser.lastNameEn} onChange={(e) => setEditingUser({ ...editingUser, lastNameEn: e.target.value })} required />
                         <InputField label="ตำแหน่ง" id={`edit-position-${user.id}`} value={editingUser.position} onChange={(e) => setEditingUser({ ...editingUser, position: e.target.value })} required icon={<FiBriefcase/>} />
-                        <InputField label="ส่วนงาน" id={`edit-department-${user.id}`} value={editingUser.department} onChange={(e) => setEditingUser({ ...editingUser, department: e.target.value })} required icon={<FiBriefcase/>} />
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ส่วนงาน</label>
+                            <SearchableDropdown
+                                name={`edit-department-${user.id}`}
+                                options={departmentOptions}
+                                value={editingUser.department || ''}
+                                onChange={(value) => setEditingUser({ ...editingUser, department: value })}
+                            />
+                        </div>
                         <InputField label="Email" id={`edit-email-${user.id}`} value={editingUser.email} readOnly icon={<FiMail/>}/>
                         <InputField label="Username" id={`edit-username-${user.id}`} value={editingUser.username || ''} readOnly icon={<FiUser/>} />
                         <InputField label="รหัสผ่านใหม่" type="password" id={`edit-password-${user.id}`} value={editingUser.newPassword || ''} onChange={(e) => setEditingUser({ ...editingUser, newPassword: e.target.value })} placeholder="ปล่อยว่างไว้เพื่อคงรหัสเดิม" icon={<FiKey/>} wrapperClassName="md:col-span-2"/>

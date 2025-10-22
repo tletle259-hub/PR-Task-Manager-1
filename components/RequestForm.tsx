@@ -1,10 +1,12 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiPaperclip, FiX, FiCalendar, FiPlus, FiTrash2 } from 'react-icons/fi';
-import { Task, TaskType, TaskStatus, Attachment, User } from '../types';
+import { Task, TaskType, TaskStatus, Attachment, User, Department } from '../types';
 import { GOOGLE_DRIVE_UPLOAD_URL } from '../config';
 import { RequesterProfile } from '../App';
 import { v4 as uuidv4 } from 'uuid';
+import { onDepartmentsUpdate } from '../services/departmentService';
+import SearchableDropdown from './SearchableDropdown';
 
 
 interface RequestFormProps {
@@ -65,11 +67,19 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<string[]>([]);
 
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+  
+  useEffect(() => {
+    const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+      setDepartments(depts.map(d => d.name));
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -90,6 +100,14 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
         }));
     }
   }, [user]);
+  
+  const departmentOptions = useMemo(() => {
+    const optionSet = new Set(departments);
+    if (formData.department && !optionSet.has(formData.department)) {
+        optionSet.add(formData.department);
+    }
+    return Array.from(optionSet).sort();
+  }, [departments, formData.department]);
 
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
@@ -137,6 +155,17 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
         });
     }
   };
+  
+  const handleDropdownChange = (name: string, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            delete newErrors[name];
+            return newErrors;
+        });
+    }
+  };
 
   const handleSubTaskChange = (id: string, field: keyof SubTask, value: string) => {
       setSubTasks(prev => prev.map(sub => sub.id === id ? {...sub, [field]: value} : sub));
@@ -160,7 +189,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
       }
   };
   
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement>) => {
     const { name } = e.target;
     const formErrors = validate();
     if (formErrors[name]) {
@@ -354,7 +383,17 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user }) =
             { formData.requestType !== 'project' && <InputField label="3. วัน/เดือน/ปี (ที่ต้องการรับงาน) *" name="dueDate" type="date" value={formData.dueDate} onChange={handleChange} onBlur={handleBlur} error={errors.dueDate} required icon={<FiCalendar className="w-5 h-5 text-gray-400" />} /> }
 
             <InputField label="4. ชื่อ-สกุล ผู้สั่งงาน *" name="requesterName" value={formData.requesterName} readOnly className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed"/>
-            <InputField label="5. สังกัดฝ่าย/ส่วน *" name="department" value={formData.department} readOnly className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed"/>
+            <div className="">
+                <label htmlFor="department" className="form-label">5. ส่วนงาน *</label>
+                <SearchableDropdown
+                    name="department"
+                    options={departmentOptions}
+                    value={formData.department}
+                    onChange={(value) => handleDropdownChange('department', value)}
+                    error={errors.department}
+                    onBlur={() => handleBlur({ target: { name: 'department' } } as any)}
+                />
+            </div>
             <InputField label="6. เป็นชิ้นงานของคณะกรรมการฯ คณะอนุกรรมการ หรือคณะทำงานใด? (หากไม่มี ไม่ต้องระบุ)" name="committee" value={formData.committee} onChange={handleChange} onBlur={handleBlur} placeholder="เช่น คณะกรรมการกำหนดมาตรฐานการบัญชี"/>
             <InputField label="7. อีเมล *" name="requesterEmail" type="email" value={formData.requesterEmail} readOnly className="!bg-gray-100 dark:!bg-gray-700 cursor-not-allowed" />
             <InputField label="เบอร์โทรศัพท์ *" name="phone" value={formData.phone} onChange={handleChange} onBlur={handleBlur} error={errors.phone} required placeholder="เช่น 2546 หรือ 0-2685-2500" />
