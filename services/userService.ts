@@ -1,5 +1,3 @@
-
-
 import { collection, addDoc, query, where, getDocs, doc, getDoc, updateDoc, onSnapshot, deleteDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { User } from '../types';
@@ -25,10 +23,24 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
             return null;
         }
         const userDoc = querySnapshot.docs[0];
-        // FIX: Cast `userDoc.data()` to `User` to ensure it's a spreadable object type for TypeScript.
         return { id: userDoc.id, ...userDoc.data() as User };
     } catch (e) {
         console.error("Error getting user by username: ", e);
+        return null;
+    }
+};
+
+export const getUserByMsalAccountId = async (accountId: string): Promise<User | null> => {
+    try {
+        const q = query(usersCollectionRef, where("msalAccountId", "==", accountId));
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+            return null;
+        }
+        const userDoc = querySnapshot.docs[0];
+        return { id: userDoc.id, ...userDoc.data() as User };
+    } catch (e) {
+        console.error("Error getting user by MSAL account ID: ", e);
         return null;
     }
 };

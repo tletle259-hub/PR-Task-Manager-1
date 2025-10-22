@@ -88,6 +88,7 @@ export interface User {
   email: string;
   username: string;
   password?: string; // Should be hashed in a real app, plaintext for this scope
+  msalAccountId?: string;
 }
 
 

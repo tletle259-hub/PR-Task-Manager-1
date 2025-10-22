@@ -6,8 +6,10 @@ import TeamLogin from './components/TeamLogin';
 import TeamApp from './TeamApp';
 import RequestApp from './RequestApp';
 import RequesterRegister from './components/RequesterRegister';
+import MicrosoftOnboarding from './components/MicrosoftOnboarding';
 import { User, TeamMember } from './types';
 import { getMicrosoftAccount, loginWithMicrosoft, logoutFromMicrosoft, msalInstancePromise } from './services/authService';
+import { getUserByMsalAccountId, createUser } from './services/userService';
 
 export type RequesterProfile = User | AccountInfo;
 
@@ -17,6 +19,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [view, setView] = useState<AppView>('home');
   const [currentUser, setCurrentUser] = useState<TeamMember | RequesterProfile | null>(null);
+  const [onboardingMsalAccount, setOnboardingMsalAccount] = useState<AccountInfo | null>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -24,26 +27,25 @@ const App: React.FC = () => {
   }, [theme]);
 
   useEffect(() => {
-    // Check for user session from localStorage for persistence
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
         const user = JSON.parse(savedUser);
-
-        // More robust check to differentiate user types
-        // 1. Check if it's a TeamMember (they have an `avatar` property)
         if ('avatar' in user && 'name' in user && !('firstNameTh' in user)) {
             handleTeamLoginSuccess(user);
         } 
-        // 2. Check if it's a Requester (MSAL accounts have `homeAccountId`, custom have `firstNameTh`)
         else if ('homeAccountId' in user || 'firstNameTh' in user) {
-            handleRequesterLogin(user);
+             handleRequesterLogin(user);
         }
     } else {
-         // Fallback check for an active MSAL session if localStorage is empty
-        msalInstancePromise.then(() => {
+        msalInstancePromise.then(async () => {
             const account = getMicrosoftAccount();
             if (account) {
-                handleRequesterLogin(account);
+                const userProfile = await getUserByMsalAccountId(account.homeAccountId);
+                if (userProfile) {
+                    handleRequesterLogin(userProfile);
+                } else {
+                    setOnboardingMsalAccount(account);
+                }
             }
         });
     }
@@ -68,12 +70,37 @@ const App: React.FC = () => {
   const handleMicrosoftLogin = async () => {
       const account = await loginWithMicrosoft();
       if(account) {
-          handleRequesterLogin(account);
+          const existingUser = await getUserByMsalAccountId(account.homeAccountId);
+          if (existingUser) {
+              handleRequesterLogin(existingUser);
+          } else {
+              setOnboardingMsalAccount(account);
+          }
       }
+  };
+  
+  const handleOnboardingComplete = async (profileData: Omit<User, 'id' | 'password' | 'msalAccountId' | 'username' | 'email'>) => {
+    if (!onboardingMsalAccount) return;
+
+    try {
+        const fullUserData: Omit<User, 'id'> = {
+            ...profileData,
+            msalAccountId: onboardingMsalAccount.homeAccountId,
+            username: onboardingMsalAccount.username,
+            email: onboardingMsalAccount.username,
+        };
+        const newUserId = await createUser(fullUserData); 
+        const newUser: User = { id: newUserId, ...fullUserData };
+        setOnboardingMsalAccount(null);
+        handleRequesterLogin(newUser);
+    } catch (error) {
+        console.error("Failed to complete onboarding:", error);
+    }
   };
 
   const handleLogout = async () => {
-    if (currentUser && 'homeAccountId' in currentUser) { // It's an MSAL account
+    const isMsal = currentUser && (('msalAccountId' in currentUser && currentUser.msalAccountId) || ('homeAccountId' in currentUser));
+    if (isMsal) {
         await logoutFromMicrosoft();
     }
     localStorage.removeItem('currentUser');
@@ -117,34 +144,15 @@ const App: React.FC = () => {
       <AnimatePresence mode="wait">
         {renderContent()}
       </AnimatePresence>
-      <style>{`
-        .login-container {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: #f3f4f6; /* bg-gray-100 */
-          background-image:
-            radial-gradient(at 47% 33%, hsl(203.00, 0%, 100%) 0, transparent 59%),
-            radial-gradient(at 82% 65%, hsl(218.00, 79%, 95%) 0, transparent 55%);
-        }
-        .dark .login-container {
-          background-color: #111827; /* dark:bg-gray-900 */
-           background-image:
-            radial-gradient(at 47% 33%, hsl(220, 15%, 20%) 0, transparent 59%),
-            radial-gradient(at 82% 65%, hsl(218.00, 29%, 15%) 0, transparent 55%);
-        }
-        .icon-interactive {
-            transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
-        }
-        .icon-interactive:hover {
-            transform: scale(1.1);
-        }
-        :root {
-            --brand-primary: #2563eb;
-            --brand-secondary: #f97316;
-        }
-      `}</style>
+      <AnimatePresence>
+        {onboardingMsalAccount && (
+            <MicrosoftOnboarding 
+                msalAccount={onboardingMsalAccount}
+                onComplete={handleOnboardingComplete}
+                onCancel={() => setOnboardingMsalAccount(null)}
+            />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

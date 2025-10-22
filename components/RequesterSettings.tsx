@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { FiUser, FiLock, FiSave, FiInfo, FiMail, FiBriefcase, FiEye, FiEyeOff } from 'react-icons/fi';
 import { RequesterProfile } from '../App';
 import { User } from '../types';
-import { updateUser } from '../services/userService';
+import { updateUser, getUserByMsalAccountId } from '../services/userService';
+import { loginWithMicrosoft } from '../services/authService';
+
 
 interface RequesterSettingsProps {
     user: RequesterProfile;
@@ -11,15 +13,17 @@ interface RequesterSettingsProps {
 }
 
 const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUpdate }) => {
-    const isMsalAccount = 'localAccountId' in user;
-    
+    const isMsalAccount = 'homeAccountId' in user || ('msalAccountId' in user && !!user.msalAccountId);
+    const isCustomUser = 'id' in user;
+
     const [formData, setFormData] = useState<Partial<User>>({});
     const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [showPassword, setShowPassword] = useState(false);
+    const [isLinking, setIsLinking] = useState(false);
 
     useEffect(() => {
-        if (!isMsalAccount) {
+        if (isCustomUser) {
             setFormData({
                 firstNameTh: user.firstNameTh,
                 lastNameTh: user.lastNameTh,
@@ -31,18 +35,17 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
                 username: user.username,
             });
         }
-    }, [user, isMsalAccount]);
+    }, [user, isCustomUser]);
     
     useEffect(() => {
         const { firstNameEn, lastNameEn } = formData;
-        if (firstNameEn && lastNameEn && !isMsalAccount) {
+        if (isCustomUser && !user.msalAccountId && firstNameEn && lastNameEn && lastNameEn.length >= 2) {
             const generatedUsername = `${firstNameEn.toLowerCase().trim()}.${lastNameEn.slice(0, 2).toLowerCase().trim()}`;
             if (generatedUsername !== formData.username) {
                 setFormData(prev => ({ ...prev, username: generatedUsername }));
             }
         }
-    }, [formData.firstNameEn, formData.lastNameEn, isMsalAccount, formData.username]);
-
+    }, [formData.firstNameEn, formData.lastNameEn, isCustomUser, user, formData.username]);
 
     const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -55,7 +58,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
-        if (isMsalAccount || !('id' in user)) return;
+        if (!isCustomUser) return;
 
         try {
             await updateUser(user.id, formData);
@@ -70,7 +73,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     const handlePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
-        if (isMsalAccount || !('id' in user)) return;
+        if (!isCustomUser) return;
 
         if(passwordData.newPassword.length < 4) {
              setMessage({ type: 'error', text: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 4 ตัวอักษร' });
@@ -93,14 +96,43 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         }
     };
 
-    if (isMsalAccount) {
+    const handleLinkMicrosoftAccount = async () => {
+        setIsLinking(true);
+        setMessage(null);
+        if (!isCustomUser) return;
+
+        try {
+            const msalAccount = await loginWithMicrosoft();
+            if (msalAccount) {
+                const existingUser = await getUserByMsalAccountId(msalAccount.homeAccountId);
+                if (existingUser && existingUser.id !== user.id) {
+                    setMessage({ type: 'error', text: 'บัญชี Microsoft นี้ถูกเชื่อมต่อกับบัญชีอื่นแล้ว' });
+                    setIsLinking(false);
+                    return;
+                }
+                
+                await updateUser(user.id, { msalAccountId: msalAccount.homeAccountId });
+                onProfileUpdate({ ...user, msalAccountId: msalAccount.homeAccountId });
+                setMessage({ type: 'success', text: 'เชื่อมต่อบัญชี Microsoft สำเร็จ!' });
+            }
+        } catch (error) {
+            console.error("Error linking MSAL account:", error);
+            setMessage({ type: 'error', text: 'เกิดข้อผิดพลาดในการเชื่อมต่อบัญชี' });
+        } finally {
+            setIsLinking(false);
+        }
+    };
+    
+    const userEmail = 'email' in user ? user.email : ('username' in user ? user.username : 'N/A');
+
+    if (!isCustomUser) { // Pure MSAL account (logged in first time, has AccountInfo but not User profile yet)
         return (
             <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold mb-6">ตั้งค่าบัญชี</h2>
                 <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
                      <h3 className="text-xl font-bold mb-4 flex items-center gap-3"><FiInfo className="text-blue-500" /> ข้อมูลบัญชี</h3>
                      <p className="text-gray-600 dark:text-gray-400">
-                         คุณเข้าสู่ระบบด้วยบัญชี Microsoft ({user.username}).
+                         คุณเข้าสู่ระบบด้วยบัญชี Microsoft ({userEmail}).
                          <br/>
                          ข้อมูลส่วนตัวและการตั้งค่ารหัสผ่านจะถูกจัดการผ่านระบบของ Microsoft โดยตรง
                      </p>
@@ -144,22 +176,47 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
                 </div>
             </motion.form>
 
-            <motion.form onSubmit={handlePasswordSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
-                <h3 className="text-xl font-bold flex items-center gap-3"><FiLock /> เปลี่ยนรหัสผ่าน</h3>
-                <div className="relative">
-                    <InputField label="รหัสผ่านใหม่" name="newPassword" type={showPassword ? 'text' : 'password'} value={passwordData.newPassword} onChange={handlePasswordChange} icon={<FiLock/>} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute bottom-2 right-3 p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">{showPassword ? <FiEyeOff /> : <FiEye />}</button>
-                </div>
-                 <div className="relative">
-                    <InputField label="ยืนยันรหัสผ่านใหม่" name="confirmPassword" type={showPassword ? 'text' : 'password'} value={passwordData.confirmPassword} onChange={handlePasswordChange} icon={<FiLock/>} />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute bottom-2 right-3 p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">{showPassword ? <FiEyeOff /> : <FiEye />}</button>
-                </div>
-                 <div className="text-right pt-2">
-                    <button type="submit" className="icon-interactive bg-brand-secondary text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-orange-600 transition-colors flex items-center gap-2 ml-auto">
-                       <FiSave /> เปลี่ยนรหัสผ่าน
-                    </button>
-                </div>
-            </motion.form>
+            {!user.msalAccountId && (
+                 <motion.form onSubmit={handlePasswordSubmit} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
+                    <h3 className="text-xl font-bold flex items-center gap-3"><FiLock /> เปลี่ยนรหัสผ่าน</h3>
+                    <div className="relative">
+                        <InputField label="รหัสผ่านใหม่" name="newPassword" type={showPassword ? 'text' : 'password'} value={passwordData.newPassword} onChange={handlePasswordChange} icon={<FiLock/>} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute bottom-2 right-3 p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">{showPassword ? <FiEyeOff /> : <FiEye />}</button>
+                    </div>
+                    <div className="relative">
+                        <InputField label="ยืนยันรหัสผ่านใหม่" name="confirmPassword" type={showPassword ? 'text' : 'password'} value={passwordData.confirmPassword} onChange={handlePasswordChange} icon={<FiLock/>} />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute bottom-2 right-3 p-1 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">{showPassword ? <FiEyeOff /> : <FiEye />}</button>
+                    </div>
+                    <div className="text-right pt-2">
+                        <button type="submit" className="icon-interactive bg-brand-secondary text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-orange-600 transition-colors flex items-center gap-2 ml-auto">
+                        <FiSave /> เปลี่ยนรหัสผ่าน
+                        </button>
+                    </div>
+                </motion.form>
+            )}
+
+            <motion.div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
+                 <h3 className="text-xl font-bold flex items-center gap-3">
+                    <img src="https://img.icons8.com/color/24/000000/microsoft.png" alt="Microsoft logo" />
+                    เชื่อมต่อบัญชี
+                </h3>
+                {user.msalAccountId ? (
+                    <div className="p-4 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm">
+                        <p>บัญชีของคุณเชื่อมต่อกับ Microsoft เรียบร้อยแล้ว ({user.email}).</p>
+                    </div>
+                ) : (
+                    <div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">เชื่อมต่อบัญชี Microsoft ของคุณเพื่อการเข้าสู่ระบบที่ง่ายและรวดเร็วยิ่งขึ้น</p>
+                        <button 
+                            onClick={handleLinkMicrosoftAccount} 
+                            disabled={isLinking}
+                            className="w-full bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-semibold py-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {isLinking ? 'กำลังเชื่อมต่อ...' : 'เชื่อมต่อกับ Microsoft'}
+                        </button>
+                    </div>
+                )}
+            </motion.div>
         </div>
     );
 };
