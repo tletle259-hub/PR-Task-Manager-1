@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut, FiAlertTriangle } from 'react-icons/fi';
@@ -9,6 +10,7 @@ import { onContactMessagesUpdate, updateContactMessage, deleteContactMessage, de
 import { onUsersUpdate, updateUser as updateUserService, deleteUser as deleteUserService } from './services/userService';
 import { onTaskTypeConfigsUpdate } from './services/departmentService';
 import { seedInitialData } from './services/seedService';
+import { ensureFirebaseAuth } from './services/authService';
 
 import Header from './components/Header';
 import OverviewDashboard from './components/OverviewDashboard';
@@ -334,37 +336,43 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     let unsubUsers: () => void;
     let unsubConfigs: () => void;
 
-    seedInitialData().then(() => {
-        unsubTasks = onTasksUpdate(newTasks => {
-            setTasks(prevTasks => {
-                if (!isInitialTasksSet.current) {
-                    isInitialTasksSet.current = true;
-                } else if (newTasks.length > prevTasks.length) {
-                    const oldTaskIds = new Set(prevTasks.map(t => t.id));
-                    const addedTasks = newTasks.filter(t => !oldTaskIds.has(t.id));
-
-                    if (addedTasks.length > 0) {
-                        addedTasks.forEach(newTask => {
-                            addNotification({
-                                type: NotificationType.NEW_TASK,
-                                message: `มีงานใหม่เข้ามา: "${newTask.taskTitle}"`,
-                                taskId: newTask.id,
-                            });
-                        });
-                        playNotificationSound();
-                    }
-                }
-                return newTasks;
-            });
-        });
-        unsubMembers = onTeamMembersUpdate(setTeamMembers);
-        unsubNotifications = onNotificationsUpdate(setNotifications);
-        unsubMessages = onContactMessagesUpdate(setContactMessages);
-        unsubUsers = onUsersUpdate(setUsers);
-        unsubConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
+    const init = async () => {
+        await ensureFirebaseAuth();
         
-        setIsLoading(false);
-    });
+        seedInitialData().then(() => {
+            unsubTasks = onTasksUpdate(newTasks => {
+                setTasks(prevTasks => {
+                    if (!isInitialTasksSet.current) {
+                        isInitialTasksSet.current = true;
+                    } else if (newTasks.length > prevTasks.length) {
+                        const oldTaskIds = new Set(prevTasks.map(t => t.id));
+                        const addedTasks = newTasks.filter(t => !oldTaskIds.has(t.id));
+
+                        if (addedTasks.length > 0) {
+                            addedTasks.forEach(newTask => {
+                                addNotification({
+                                    type: NotificationType.NEW_TASK,
+                                    message: `มีงานใหม่เข้ามา: "${newTask.taskTitle}"`,
+                                    taskId: newTask.id,
+                                });
+                            });
+                            playNotificationSound();
+                        }
+                    }
+                    return newTasks;
+                });
+            });
+            unsubMembers = onTeamMembersUpdate(setTeamMembers);
+            unsubNotifications = onNotificationsUpdate(setNotifications);
+            unsubMessages = onContactMessagesUpdate(setContactMessages);
+            unsubUsers = onUsersUpdate(setUsers);
+            unsubConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
+            
+            setIsLoading(false);
+        });
+    };
+
+    init();
 
     return () => {
         if (unsubTasks) unsubTasks();

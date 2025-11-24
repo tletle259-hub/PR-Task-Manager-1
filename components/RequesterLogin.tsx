@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiLogIn, FiUser, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
@@ -30,8 +31,14 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
         setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     } catch (err: any) {
-      console.error("Custom login error:", err);
-      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      console.error("Login error:", err);
+      const msg = err.message || '';
+      
+      if (msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
+         setError('Permission Denied! ฐานข้อมูลถูกล็อคอยู่\nกรุณาไปที่ Firebase Console > Rules\nเช็คว่ามี allow read, write: if true; \nและอย่าลืมกดปุ่ม "Publish" (เผยแพร่) ที่มุมขวาบน!');
+      } else {
+         setError('เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -81,7 +88,7 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
           </button>
         </div>
 
-        {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+        {error && <p className="text-red-500 text-sm text-center bg-red-100 dark:bg-red-900/30 p-2 rounded whitespace-pre-line">{error}</p>}
 
         <button
           type="submit"

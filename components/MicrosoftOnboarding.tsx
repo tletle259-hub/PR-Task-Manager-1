@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, Department } from '../types';
@@ -5,6 +6,7 @@ import { AccountInfo } from '@azure/msal-browser';
 import { FiUser, FiBriefcase, FiCheckCircle } from 'react-icons/fi';
 import { onDepartmentsUpdate } from '../services/departmentService';
 import SearchableDropdown from './SearchableDropdown';
+import { ensureFirebaseAuth } from '../services/authService';
 
 interface MicrosoftOnboardingProps {
     msalAccount: AccountInfo;
@@ -44,10 +46,15 @@ const MicrosoftOnboarding: React.FC<MicrosoftOnboardingProps> = ({ msalAccount, 
     const [departments, setDepartments] = useState<string[]>([]);
 
     useEffect(() => {
-        const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
-            setDepartments(depts.map(d => d.name));
-        });
-        return () => unsubscribe();
+        let unsubscribe: () => void;
+        const init = async () => {
+            await ensureFirebaseAuth();
+            unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+                setDepartments(depts.map(d => d.name));
+            });
+        };
+        init();
+        return () => { if(unsubscribe) unsubscribe(); };
     }, []);
 
     const validate = () => {

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFilePlus, FiList, FiSettings, FiLogOut, FiSun, FiMoon, FiMenu, FiAlertTriangle } from 'react-icons/fi';
@@ -9,6 +10,7 @@ import { addTask, onTasksUpdate } from './services/taskService';
 import { onTaskTypeConfigsUpdate } from './services/departmentService';
 import { RequesterProfile } from './App';
 import ContactWidget from './components/ChatBot';
+import { ensureFirebaseAuth } from './services/authService';
 
 type RequesterView = 'form' | 'requests' | 'settings';
 
@@ -170,11 +172,20 @@ const RequestApp: React.FC<RequestAppProps> = ({ currentUser, onLogout, theme, t
   const [isLogoutConfirmVisible, setIsLogoutConfirmVisible] = useState(false);
 
   useEffect(() => {
-    const unsubscribeTasks = onTasksUpdate(setTasks);
-    const unsubscribeConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
+    let unsubscribeTasks: () => void;
+    let unsubscribeConfigs: () => void;
+
+    const init = async () => {
+        await ensureFirebaseAuth();
+        unsubscribeTasks = onTasksUpdate(setTasks);
+        unsubscribeConfigs = onTaskTypeConfigsUpdate(setTaskTypeConfigs);
+    };
+
+    init();
+
     return () => {
-        unsubscribeTasks();
-        unsubscribeConfigs();
+        if (unsubscribeTasks) unsubscribeTasks();
+        if (unsubscribeConfigs) unsubscribeConfigs();
     };
   }, []);
 

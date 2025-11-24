@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUploadCloud, FiPaperclip, FiX, FiCalendar, FiPlus, FiTrash2, FiInfo } from 'react-icons/fi';
@@ -7,6 +8,7 @@ import { RequesterProfile } from '../App';
 import { v4 as uuidv4 } from 'uuid';
 import { onDepartmentsUpdate } from '../services/departmentService';
 import SearchableDropdown from './SearchableDropdown';
+import { ensureFirebaseAuth } from '../services/authService';
 
 const OTHER_TASK_TYPE_NAME = 'งานชนิดอื่นๆ';
 
@@ -77,10 +79,15 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
   }, []);
   
   useEffect(() => {
-    const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
-      setDepartments(depts.map(d => d.name));
-    });
-    return () => unsubscribe();
+    let unsubscribe: () => void;
+    const init = async () => {
+        await ensureFirebaseAuth();
+        unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+          setDepartments(depts.map(d => d.name));
+        });
+    };
+    init();
+    return () => { if(unsubscribe) unsubscribe(); };
   }, []);
 
   useEffect(() => {

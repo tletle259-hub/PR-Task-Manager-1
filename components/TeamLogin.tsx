@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiLogIn, FiUser, FiLock, FiEye, FiEyeOff, FiChevronLeft, FiSun, FiMoon } from 'react-icons/fi';
+import { FiLogIn, FiUser, FiLock, FiEye, FiEyeOff, FiChevronLeft, FiSun, FiMoon, FiAlertTriangle } from 'react-icons/fi';
 import { TeamMember } from '../types';
 import { loginWithSecureId } from '../services/authService';
 
@@ -14,14 +15,14 @@ interface TeamLoginProps {
 const TeamLogin: React.FC<TeamLoginProps> = ({ onLoginSuccess, onBack, theme, toggleTheme }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<React.ReactNode>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsVerifying(true);
-    setError('');
+    setError(null);
 
     try {
       // Convert username to lowercase for case-insensitive matching
@@ -32,8 +33,25 @@ const TeamLogin: React.FC<TeamLoginProps> = ({ onLoginSuccess, onBack, theme, to
         setError('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       }
     } catch (err: any) {
-      console.error("Custom login error:", err);
-      setError(err.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      console.error("Login error:", err);
+      const msg = err.message || '';
+      
+      // Catch permission errors specifically
+      if (msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
+         setError(
+            <div className="text-left text-xs sm:text-sm">
+                <strong className="block mb-2 text-red-600 flex items-center gap-1"><FiAlertTriangle/> ฐานข้อมูลถูกล็อค (Permission Denied)</strong>
+                <p className="mb-2 text-gray-700 dark:text-gray-300">ระบบพยายามเชื่อมต่อแล้วแต่ถูกปฏิเสธ กรุณาตรวจสอบ:</p>
+                <ol className="list-decimal ml-4 space-y-1 mb-2 text-gray-600 dark:text-gray-400">
+                    <li>ไปที่ <strong>Firebase Console</strong> &gt; <strong>Firestore Database</strong> &gt; <strong>Rules</strong></li>
+                    <li>ตรวจสอบว่าโค้ดเป็น: <code className="font-mono bg-gray-200 px-1 rounded">allow read, write: if true;</code></li>
+                    <li className="font-bold text-red-500">สำคัญ: กดปุ่ม "Publish" (เผยแพร่) ที่มุมขวาบนด้วย!</li>
+                </ol>
+            </div>
+         );
+      } else {
+         setError('เกิดข้อผิดพลาด: ' + msg);
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -101,7 +119,11 @@ const TeamLogin: React.FC<TeamLoginProps> = ({ onLoginSuccess, onBack, theme, to
                     </button>
                 </div>
 
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                {error && (
+                    <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded border border-red-200 dark:border-red-800">
+                        {error}
+                    </div>
+                )}
                 
                 <button
                     type="submit"

@@ -1,6 +1,8 @@
+
 import { PublicClientApplication, EventType, AccountInfo } from "@azure/msal-browser";
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../firebaseConfig';
+import { signOut } from 'firebase/auth';
+import { db, auth } from '../firebaseConfig';
 import { TeamMember, User } from '../types';
 import { createUser, getUserByUsername, checkUserExists } from './userService';
 
@@ -12,7 +14,7 @@ const msalConfig = {
     redirectUri: window.location.origin,
   },
   cache: {
-    cacheLocation: "sessionStorage", 
+    cacheLocation: "sessionStorage",
     storeAuthStateInCookie: false,
   },
 };
@@ -33,6 +35,11 @@ msalInstance.addEventCallback((event: any) => {
     msalInstance.setActiveAccount(account);
   }
 });
+
+// --- Helper: Ensure Firebase Auth ---
+export const ensureFirebaseAuth = async () => {
+    await auth.authStateReady();
+};
 
 // --- MSAL Functions ---
 export const loginWithMicrosoft = async (): Promise<AccountInfo | null> => {
@@ -75,14 +82,28 @@ export const registerUser = async (userData: Omit<User, 'id'>): Promise<User> =>
 };
 
 export const loginWithUsernamePassword = async (username: string, password: string): Promise<User | null> => {
-    const user = await getUserByUsername(username);
-    if (user && user.password === password) {
-        // In a real app, you would compare hashed passwords.
-        // For this app's scope, we compare plaintext.
-        const { password: _, ...userProfile } = user; // Exclude password from returned object
-        return userProfile as User;
+    try {
+        const user = await getUserByUsername(username);
+        if (user && user.password === password) {
+            const { password: _, ...userProfile } = user;
+            return userProfile as User;
+        }
+        return null;
+    } catch (error: any) {
+        // Auto-fix: If permission denied, sign out (clear stale token) and retry once
+        if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+            console.warn("Permission error detected. Clearing auth state and retrying...");
+            await signOut(auth);
+            // Retry the operation
+            const userRetry = await getUserByUsername(username);
+            if (userRetry && userRetry.password === password) {
+                const { password: _, ...userProfile } = userRetry;
+                return userProfile as User;
+            }
+            return null;
+        }
+        throw error;
     }
-    return null;
 };
 
 
@@ -90,10 +111,29 @@ export const loginWithUsernamePassword = async (username: string, password: stri
 export const loginWithSecureId = async (username: string, password: string): Promise<TeamMember | null> => {
     const usersRef = collection(db, 'secureID');
     const q = query(usersRef, where("id", "==", username));
-    const querySnapshot = await getDocs(q);
+    
+    let querySnapshot;
+
+    try {
+        querySnapshot = await getDocs(q);
+    } catch (error: any) {
+        // Critical Fix: If permission denied, it might be due to a stale anonymous token.
+        // We sign out to force "Guest" mode which works with "allow read: if true;"
+        if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
+             console.warn("Permission denied. Clearing potential stale auth token and retrying...");
+             try {
+                 await signOut(auth);
+                 querySnapshot = await getDocs(q);
+             } catch (retryError) {
+                 // If it fails again, bubble up the error to show the Rules instruction
+                 throw error; 
+             }
+        } else {
+            throw error;
+        }
+    }
 
     if (querySnapshot.empty) {
-        console.warn(`Login attempt for non-existent user: ${username}`);
         return null;
     }
 

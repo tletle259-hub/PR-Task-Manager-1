@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiTag, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiLayout } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiLayout } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
@@ -457,7 +458,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
 
   const availableDepartments = useMemo(() => {
     const departments = new Set(tasks.map(t => t.department));
-    return Array.from(departments).sort((a, b) => a.localeCompare(b, 'th'));
+    return Array.from(departments).sort((a: string, b: string) => String(a).localeCompare(String(b), 'th'));
   }, [tasks]);
 
   const filteredAndSortedTasks = useMemo(() => {
@@ -506,14 +507,12 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
         });
     }
 
-    return [...filtered].sort((a, b) => {
-      switch (sort) {
-        case 'newest': return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        case 'oldest': return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-        case 'dueDate': return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        case 'id': return a.id.localeCompare(b.id);
-        default: return 0;
-      }
+    return [...filtered].sort((a: Task, b: Task) => {
+      if (sort === 'newest') return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+      if (sort === 'oldest') return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+      if (sort === 'dueDate') return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      if (sort === 'id') return String(a.id).localeCompare(String(b.id));
+      return 0;
     });
   }, [tasks, filter, searchTerm, filters, sort, dateFilter]);
 
@@ -535,7 +534,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
       setDateFilter(newDateFilter);
   };
 
-  const getStatusPillColor = (status: TaskStatus) => {
+  const getStatusPillColor = (status: string) => {
     switch (status) {
         case TaskStatus.NOT_STARTED: return 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200';
         case TaskStatus.IN_PROGRESS: return 'bg-yellow-200 text-yellow-800 dark:bg-yellow-500/50 dark:text-yellow-200';
@@ -705,7 +704,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
                         <ActiveFilterPill 
                             label={`สถานะ: ${filters.status}`}
                             onRemove={() => setFilters({...filters, status: 'all'})}
-                            colorClasses={getStatusPillColor(filters.status as TaskStatus)}
+                            colorClasses={getStatusPillColor(filters.status)}
                         />
                     )}
                     {filters.type !== 'all' && (

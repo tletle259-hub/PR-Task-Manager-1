@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiUserPlus, FiUser, FiLock, FiEye, FiEyeOff, FiChevronLeft, FiSun, FiMoon, FiMail, FiBriefcase } from 'react-icons/fi';
 import { User, Department } from '../types';
-import { registerUser } from '../services/authService';
+import { registerUser, ensureFirebaseAuth } from '../services/authService';
 import { onDepartmentsUpdate } from '../services/departmentService';
 import SearchableDropdown from './SearchableDropdown';
 
@@ -43,10 +44,15 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
   const [departments, setDepartments] = useState<string[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
-      setDepartments(depts.map(d => d.name));
-    });
-    return () => unsubscribe();
+    let unsubscribe: () => void;
+    const init = async () => {
+        await ensureFirebaseAuth();
+        unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+          setDepartments(depts.map(d => d.name));
+        });
+    };
+    init();
+    return () => { if(unsubscribe) unsubscribe(); };
   }, []);
 
   useEffect(() => {

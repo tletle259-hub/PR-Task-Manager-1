@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FiUser, FiLock, FiSave, FiInfo, FiMail, FiBriefcase, FiEye, FiEyeOff } from 'react-icons/fi';
 import { RequesterProfile } from '../App';
 import { User, Department } from '../types';
 import { updateUser, getUserByMsalAccountId } from '../services/userService';
-import { loginWithMicrosoft } from '../services/authService';
+import { loginWithMicrosoft, ensureFirebaseAuth } from '../services/authService';
 import { onDepartmentsUpdate } from '../services/departmentService';
 import SearchableDropdown from './SearchableDropdown';
 
@@ -41,10 +42,15 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     }, [user, isCustomUser]);
 
     useEffect(() => {
-        const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
-            setDepartments(depts.map(d => d.name));
-        });
-        return () => unsubscribe();
+        let unsubscribe: () => void;
+        const init = async () => {
+            await ensureFirebaseAuth();
+            unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
+                setDepartments(depts.map(d => d.name));
+            });
+        };
+        init();
+        return () => { if(unsubscribe) unsubscribe(); };
     }, []);
     
     const departmentOptions = useMemo(() => {
