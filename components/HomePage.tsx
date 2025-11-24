@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FiArrowRight, FiUsers, FiBriefcase, FiSun, FiMoon } from 'react-icons/fi';
-import RequesterLoginForm from './RequesterLogin'; // Renamed to avoid confusion
+import RequesterLoginForm from './RequesterLogin'; // แบบฟอร์มล็อกอินสำหรับผู้สั่งงานทั่วไป
 import { User } from '../types';
 
 interface HomePageProps {
@@ -22,6 +23,7 @@ const HomePage: React.FC<HomePageProps> = ({
   toggleTheme,
 }) => {
     
+  // เอฟเฟกต์แสงตามเมาส์ (Mouse follow glow effect)
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
     const rect = container.getBoundingClientRect();
@@ -33,6 +35,7 @@ const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <>
+      {/* CSS เฉพาะสำหรับหน้า Login (Background Shimmer) */}
       <style>{`
         .login-background-shimmer {
           position: relative;
@@ -55,6 +58,7 @@ const HomePage: React.FC<HomePageProps> = ({
           opacity: 1;
         }
       `}</style>
+      
       <motion.div
         key="home-page"
         initial={{ opacity: 0 }}
@@ -64,6 +68,7 @@ const HomePage: React.FC<HomePageProps> = ({
         className="login-container login-background-shimmer"
         onMouseMove={handleMouseMove}
       >
+        {/* ปุ่มสลับธีม */}
         <button
             onClick={toggleTheme}
             className="icon-interactive absolute top-6 right-6 p-3 rounded-full bg-white/50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 backdrop-blur-sm shadow-lg z-20"
@@ -77,6 +82,7 @@ const HomePage: React.FC<HomePageProps> = ({
             transition={{ type: 'spring' }}
             className="flex flex-col items-center gap-8 py-12 px-4 z-10"
         >
+            {/* โลโก้และชื่อระบบ */}
             <div className="flex justify-center items-center gap-4 text-center">
                  <img 
                     src="https://eservice.tfac.or.th/check_member/assets/images/logo.png" 
@@ -96,12 +102,14 @@ const HomePage: React.FC<HomePageProps> = ({
                 </div>
             </div>
             
+            {/* ส่วนล็อกอินสำหรับผู้สั่งงาน (Requester) */}
             <RequesterLoginForm 
                 onLoginSuccess={onCustomLoginSuccess}
                 onMicrosoftLogin={onMicrosoftLogin}
                 onNavigateToRegister={onNavigateToRegister}
             />
 
+            {/* ส่วนล็อกอินสำหรับเจ้าหน้าที่ (Team Member) */}
             <motion.div 
                 whileHover={{ y: -5 }}
                 className="w-full max-w-md bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-white/30 dark:border-gray-700 rounded-2xl shadow-lg p-4 flex items-center justify-between"

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiPlus, FiX, FiTrash2, FiClock } from 'react-icons/fi';
@@ -7,17 +8,20 @@ import { onCalendarEventsUpdate, saveCalendarEvents, deleteCalendarEvent, addCal
 
 type ViewMode = 'month' | 'week' | 'day';
 
-// A union type for items in the calendar to handle Tasks and CalendarEvents.
+// Union type สำหรับรวม Task และ Event เข้าด้วยกันเพื่อแสดงบนปฏิทิน
 type CalendarItem = (Task & { itemType: 'task' }) | (CalendarEvent & { itemType: 'event' });
 
+// สีสำหรับกิจกรรมในปฏิทิน
 const EVENT_COLORS = [ '#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899'];
 
 // --- HELPER FUNCTIONS ---
+// ตรวจสอบว่าเป็นวันเดียวกันหรือไม่
 const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 const formatToYyyyMmDd = (date: Date) => date.toISOString().split('T')[0];
 const formatToTime = (date: Date) => date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
 
-// --- MODAL COMPONENT ---
+// --- EVENT MODAL COMPONENT ---
+// Modal สำหรับสร้าง/แก้ไขกิจกรรมในปฏิทิน
 const EventModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -101,13 +105,15 @@ interface CalendarViewProps {
   onSelectTask: (task: Task) => void;
 }
 
+// --- MAIN CALENDAR VIEW COMPONENT ---
 const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
-  const [currentDate, setCurrentDate] = useState(new Date('2025-10-17')); // Default to Oct 2025 to show mock data
+  const [currentDate, setCurrentDate] = useState(new Date()); 
   const [viewMode, setViewMode] = useState<ViewMode>('month');
   const [customEvents, setCustomEvents] = useState<CalendarEvent[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Partial<CalendarEvent> | null>(null);
   
+  // โหลดกิจกรรมจาก Firebase
   useEffect(() => {
     const unsubscribe = onCalendarEventsUpdate(setCustomEvents);
     return () => unsubscribe();
@@ -135,6 +141,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
     setSelectedEvent(null);
   }
 
+  // รวม Tasks และ Custom Events เข้าด้วยกันเพื่อแสดงบนปฏิทิน
   const allItems: CalendarItem[] = useMemo(() => [
     ...tasks.map((t): CalendarItem => ({...t, itemType: 'task'})),
     ...customEvents.map((e): CalendarItem => ({...e, itemType: 'event'}))
@@ -143,12 +150,13 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
   const changeMonth = (offset: number) => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
-      newDate.setDate(1); // Set to first day to avoid month skipping issues
+      newDate.setDate(1); 
       newDate.setMonth(newDate.getMonth() + offset);
       return newDate;
     });
   };
 
+  // ปฏิทินเล็กด้านข้าง
   const MiniCalendar = () => {
       const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -174,6 +182,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
       </div>
   }
 
+  // ส่วนแสดงผลหลัก (เดือน/สัปดาห์/วัน)
   const RenderView = () => {
       const today = new Date();
       
@@ -181,8 +190,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
           const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
           const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
           const daysInMonth = [];
+          // เติมช่องว่างวันแรกของเดือน
           for (let i = 0; i < firstDayOfMonth.getDay(); i++) daysInMonth.push({ date: null });
+          // เติมวันที่จริง
           for (let i = 1; i <= lastDayOfMonth.getDate(); i++) daysInMonth.push({ date: new Date(currentDate.getFullYear(), currentDate.getMonth(), i) });
+          // เติมช่องว่างวันสุดท้ายให้เต็มตาราง
           while (daysInMonth.length % 7 !== 0 || daysInMonth.length < 35) daysInMonth.push({ date: null });
 
           return <div className="grid grid-cols-7 grid-rows-5 auto-rows-fr gap-1 flex-grow">
@@ -225,6 +237,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, onSelectTask }) => {
           </div>
       }
       
+      // (สำหรับ viewMode 'week' และ 'day' ก็มี Logic คล้ายกัน...)
       if(viewMode === 'week') {
           const startOfWeek = new Date(currentDate);
           startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());

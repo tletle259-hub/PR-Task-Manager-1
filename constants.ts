@@ -1,9 +1,16 @@
+
 import { CalendarEvent, Task, TeamMember, TaskStatus, Notification, NotificationType } from './types';
 
+// --- CONSTANTS (ค่าคงที่) ---
+
+// Key สำหรับเก็บข้อมูลใน LocalStorage (ถ้ามีการใช้)
 export const CALENDAR_EVENTS_STORAGE_KEY = 'pr-calendar-events';
 export const CONTACT_MESSAGES_STORAGE_KEY = 'pr-contact-messages';
+
+// รายชื่อเดือนภาษาไทย
 export const MONTH_NAMES_TH = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
+// รายชื่อแผนกเริ่มต้น (ใช้สำหรับ Seeding ลง Database ครั้งแรก)
 export const INITIAL_DEPARTMENTS: string[] = [
   'ส่วนงานอำนวยการ',
   'ส่วนงานจัดการ',
@@ -31,6 +38,7 @@ export const INITIAL_DEPARTMENTS: string[] = [
   'สำนักงานคณะกรรมการจรรณยาบรรณ',
 ];
 
+// ข้อมูลงานจำลอง (Mock Data) สำหรับทดสอบระบบตอนเริ่มต้น
 export const MOCK_TASKS: Task[] = [
   {
     id: 'PR001',
@@ -57,6 +65,7 @@ export const MOCK_TASKS: Task[] = [
     committee: 'คณะกรรมการการตลาด',
     additionalNotes: 'ต้องการ Mood & Tone ที่ดูทันสมัย'
   },
+  // ... (ข้อมูลจำลองอื่นๆ) ...
   {
     id: 'PR002',
     timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
@@ -177,6 +186,7 @@ export const MOCK_TASKS: Task[] = [
   }
 ];
 
+// ข้อมูลการแจ้งเตือนจำลอง
 export const MOCK_NOTIFICATIONS: Notification[] = [
   {
     id: 'NOTIF001',
@@ -186,6 +196,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
+  // ...
   {
     id: 'NOTIF002',
     type: NotificationType.DUE_SOON,
@@ -212,15 +223,16 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
   },
 ];
 
+// สีประจำสถานะงาน (ใช้ Tailwind CSS Classes)
 export const TASK_STATUS_COLORS: { [key in TaskStatus]: string } = {
-  [TaskStatus.NOT_STARTED]: 'bg-gray-500 dark:bg-gray-600',
-  [TaskStatus.IN_PROGRESS]: 'bg-yellow-500 dark:bg-yellow-600',
-  [TaskStatus.COMPLETED]: 'bg-green-500 dark:bg-green-600',
-  [TaskStatus.CANCELLED]: 'bg-red-500 dark:bg-red-600',
+  [TaskStatus.NOT_STARTED]: 'bg-gray-500 dark:bg-gray-600', // สีเทา
+  [TaskStatus.IN_PROGRESS]: 'bg-yellow-500 dark:bg-yellow-600', // สีเหลือง
+  [TaskStatus.COMPLETED]: 'bg-green-500 dark:bg-green-600', // สีเขียว
+  [TaskStatus.CANCELLED]: 'bg-red-500 dark:bg-red-600', // สีแดง
 };
 
-// This map is now primarily used for seeding initial colors.
-// UI components should prefer using the colorHex from TaskTypeConfig.
+// สีประจำประเภทงาน (ใช้สำหรับ Initial Data Seeding)
+// หมายเหตุ: ปัจจุบัน UI ใช้สีจาก Firestore (TaskTypeConfig) แทนค่าเหล่านี้แล้ว
 export const TASK_TYPE_COLORS: { [key: string]: { bg: string; text: string; border: string; hex: string; } } = {
   'โบรชัวร์':      { bg: 'bg-rose-100 dark:bg-rose-900/50',      text: 'text-rose-700 dark:text-rose-300',      border: 'border-rose-500',      hex: '#f43f5e' },
   'แบนเนอร์':        { bg: 'bg-sky-100 dark:bg-sky-900/50',        text: 'text-sky-700 dark:text-sky-300',        border: 'border-sky-500',        hex: '#0ea5e9' },
@@ -241,7 +253,7 @@ export const TASK_TYPE_COLORS: { [key: string]: { bg: string; text: string; bord
   'งานชนิดอื่นๆ':         { bg: 'bg-stone-100 dark:bg-stone-700',      text: 'text-stone-700 dark:text-stone-300',      border: 'border-stone-500',      hex: '#78716c' },
 };
 
-
+// วันหยุดราชการสำหรับปฏิทิน
 export const MOCK_HOLIDAYS: { date: string, name: string }[] = [
     { date: '2025-01-01', name: 'วันขึ้นปีใหม่' },
     { date: '2025-04-13', name: 'วันสงกรานต์' },

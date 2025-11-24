@@ -15,6 +15,7 @@ interface RequesterSettingsProps {
     onProfileUpdate: (updatedProfile: RequesterProfile) => void;
 }
 
+// Component จัดการการตั้งค่าส่วนตัวของผู้สั่งงาน
 const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUpdate }) => {
     const isMsalAccount = 'homeAccountId' in user || ('msalAccountId' in user && !!user.msalAccountId);
     const isCustomUser = 'id' in user;
@@ -26,6 +27,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     const [isLinking, setIsLinking] = useState(false);
     const [departments, setDepartments] = useState<string[]>([]);
 
+    // โหลดข้อมูลเดิม
     useEffect(() => {
         if (isCustomUser) {
             setFormData({
@@ -41,6 +43,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         }
     }, [user, isCustomUser]);
 
+    // โหลดแผนก
     useEffect(() => {
         let unsubscribe: () => void;
         const init = async () => {
@@ -61,6 +64,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         return Array.from(optionSet).sort();
     }, [departments, formData.department]);
     
+    // Update Username อัตโนมัติเมื่อเปลี่ยนชื่อ (ถ้ายังไม่เคยผูก MSAL)
     useEffect(() => {
         const { firstNameEn, lastNameEn } = formData;
         if (isCustomUser && !user.msalAccountId && firstNameEn && lastNameEn && lastNameEn.length >= 2) {
@@ -79,6 +83,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
     };
 
+    // บันทึกข้อมูลส่วนตัว
     const handleProfileSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
@@ -94,6 +99,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         }
     };
     
+    // เปลี่ยนรหัสผ่าน
     const handlePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage(null);
@@ -120,6 +126,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         }
     };
 
+    // เชื่อมต่อบัญชี Microsoft
     const handleLinkMicrosoftAccount = async () => {
         setIsLinking(true);
         setMessage(null);
@@ -128,6 +135,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
         try {
             const msalAccount = await loginWithMicrosoft();
             if (msalAccount) {
+                // เช็คว่าบัญชีนี้ผูกกับคนอื่นไปแล้วหรือยัง
                 const existingUser = await getUserByMsalAccountId(msalAccount.homeAccountId);
                 if (existingUser && existingUser.id !== user.id) {
                     setMessage({ type: 'error', text: 'บัญชี Microsoft นี้ถูกเชื่อมต่อกับบัญชีอื่นแล้ว' });
@@ -149,7 +157,8 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     
     const userEmail = 'email' in user ? user.email : ('username' in user ? user.username : 'N/A');
 
-    if (!isCustomUser) { // Pure MSAL account (logged in first time, has AccountInfo but not User profile yet)
+    // กรณี Login ด้วย Microsoft โดยตรงแต่ยังไม่ได้สร้าง User Profile ในระบบ
+    if (!isCustomUser) {
         return (
             <div className="max-w-2xl mx-auto">
                 <h2 className="text-3xl font-bold mb-6">ตั้งค่าบัญชี</h2>

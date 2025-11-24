@@ -14,6 +14,7 @@ interface RequesterRegisterProps {
   toggleTheme: () => void;
 }
 
+// Helper Component: Input Field ที่มีไอคอน
 const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ReactNode; error?: string }> = ({ icon, error, ...props }) => (
     <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>
@@ -26,6 +27,7 @@ const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { icon:
 );
 
 const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess, onNavigateToLogin, theme, toggleTheme }) => {
+  // State เก็บข้อมูลฟอร์มลงทะเบียน
   const [formData, setFormData] = useState({
     firstNameTh: '',
     lastNameTh: '',
@@ -43,6 +45,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [departments, setDepartments] = useState<string[]>([]);
 
+  // โหลดรายชื่อแผนก
   useEffect(() => {
     let unsubscribe: () => void;
     const init = async () => {
@@ -55,6 +58,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
     return () => { if(unsubscribe) unsubscribe(); };
   }, []);
 
+  // สร้าง Username อัตโนมัติจากชื่อภาษาอังกฤษ (firstname.la)
   useEffect(() => {
     const { firstNameEn, lastNameEn } = formData;
     if (firstNameEn && lastNameEn.length >= 2) {
@@ -65,6 +69,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
     }
   }, [formData.firstNameEn, formData.lastNameEn]);
 
+  // ตรวจสอบความถูกต้องของข้อมูล
   const validate = () => {
     const newErrors: { [key: string]: string } = {};
     if (!formData.firstNameTh) newErrors.firstNameTh = "กรุณากรอกชื่อจริง";
@@ -94,6 +99,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
 
     try {
         const { confirmPassword, ...userData } = formData;
+        // ส่งข้อมูลไปสมัครสมาชิก
         const newUser = await registerUser(userData);
         onRegisterSuccess(newUser);
     } catch (err: any) {
@@ -140,6 +146,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+                {/* กริด Input 2 คอลัมน์ */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <InputField icon={<FiUser />} placeholder="ชื่อ (ภาษาไทย)" name="firstNameTh" value={formData.firstNameTh} onChange={handleChange} error={errors.firstNameTh} />
                     <InputField icon={<FiUser />} placeholder="นามสกุล (ภาษาไทย)" name="lastNameTh" value={formData.lastNameTh} onChange={handleChange} error={errors.lastNameTh} />
@@ -162,6 +169,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
                 </div>
                 <InputField icon={<FiMail />} type="email" placeholder="อีเมล" name="email" value={formData.email} onChange={handleChange} error={errors.email} />
                 
+                {/* Username (Read-only) */}
                 <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Username (สำหรับเข้าสู่ระบบ)</label>
                     <div className="relative mt-1">
@@ -170,6 +178,7 @@ const RequesterRegister: React.FC<RequesterRegisterProps> = ({ onRegisterSuccess
                     </div>
                 </div>
 
+                {/* Password Fields */}
                 <div className="relative">
                     <InputField icon={<FiLock />} type={showPassword ? 'text' : 'password'} placeholder="รหัสผ่าน (4 ตัวอักษรขึ้นไป)" name="password" value={formData.password} onChange={handleChange} error={errors.password} />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center text-gray-500">{showPassword ? <FiEyeOff /> : <FiEye />}</button>

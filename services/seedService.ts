@@ -7,8 +7,8 @@ import { seedInitialDepartments, seedInitialTaskTypeConfigs } from './department
 let hasSeeded = false;
 
 /**
- * Seeds all initial data into Firestore if it hasn't been done already.
- * This function should be called once when the application starts.
+ * ฟังก์ชันสำหรับ Seed ข้อมูลเริ่มต้นลง Firestore หากยังไม่เคยทำมาก่อน
+ * จะถูกเรียก 1 ครั้งเมื่อแอปรันขึ้นมา
  */
 export const seedInitialData = async () => {
   if (hasSeeded) {
@@ -17,8 +17,8 @@ export const seedInitialData = async () => {
 
   console.log("Checking if initial data seeding is required...");
   try {
-    // The promises will run in parallel. We catch errors individually or collectively
-    // to ensure the app doesn't crash if one fails due to permissions.
+    // รันฟังก์ชัน Seed ทั้งหมดพร้อมกัน
+    // ใช้ catch แยกเพื่อป้องกันแอปพังหากมีบางอันติด Permission
     await Promise.all([
       seedInitialTasks().catch(e => console.warn("Seed tasks failed (likely permission):", e.code)),
       seedInitialTeamMembers().catch(e => console.warn("Seed team members failed (likely permission):", e.code)),
@@ -29,8 +29,7 @@ export const seedInitialData = async () => {
     console.log("Initial data check complete.");
     hasSeeded = true;
   } catch (error) {
-    // We swallow the error here so the main application initialization (attaching listeners) can proceed.
-    // The listeners themselves have error handling.
+    // หากเกิดข้อผิดพลาดร้ายแรง ให้ log ไว้ แต่ไม่ throw เพื่อให้แอปรันต่อได้
     console.error("An error occurred during data seeding:", error);
   }
 };

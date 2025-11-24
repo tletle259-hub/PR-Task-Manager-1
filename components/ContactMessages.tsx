@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContactMessage } from '../types';
@@ -13,11 +14,11 @@ interface ContactMessagesProps {
 const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, onUpdateMessage, onDeleteMessage, onClearAllMessages }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // เปิด/ปิด รายละเอียดข้อความ และทำเครื่องหมายว่าอ่านแล้ว
   const handleToggle = (messageId: string) => {
     const newExpandedId = expandedId === messageId ? null : messageId;
     setExpandedId(newExpandedId);
 
-    // Mark as read when expanded
     if (newExpandedId) {
       const message = messages.find(m => m.id === messageId);
       if (message && !message.isRead) {
@@ -38,6 +39,7 @@ const ContactMessages: React.FC<ContactMessagesProps> = ({ messages, onUpdateMes
     }
   }
   
+  // เรียงข้อความใหม่ล่าสุดขึ้นก่อน
   const sortedMessages = [...messages].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (

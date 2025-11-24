@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFileText, FiClock, FiCalendar, FiBriefcase, FiSearch, FiFilter, FiX } from 'react-icons/fi';
@@ -10,7 +11,7 @@ interface MyRequestsProps {
   taskTypeConfigs: TaskTypeConfig[];
 }
 
-// --- NEW FILTER PANEL COMPONENT ---
+// --- COMPONENT: FILTER PANEL (หน้าต่างตัวกรอง) ---
 const FilterPanel: React.FC<{
     isOpen: boolean;
     onClose: () => void;
@@ -101,24 +102,24 @@ const FilterPanel: React.FC<{
 };
 
 
+// --- MAIN COMPONENT: MY REQUESTS (งานที่ฉันสั่ง) ---
 const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail, taskTypeConfigs }) => {
   const [userTasks, setUserTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   
-  // Control states
+  // States ควบคุม
   const [filters, setFilters] = useState({ status: 'all', type: 'all', sortOrder: 'newest' });
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPanelOpen, setFilterPanelOpen] = useState(false);
   const [isStatusVisible, setIsStatusVisible] = useState(true);
 
-  // Effect to get system-wide visibility setting
+  // ตรวจสอบ Setting ว่าให้โชว์สถานะงานแก่ผู้สั่งหรือไม่
   useEffect(() => {
     const visibilitySetting = localStorage.getItem('system_status_visibility');
-    // Default to true (visible) if the setting is not found or not 'false'
     setIsStatusVisible(visibilitySetting !== 'false');
   }, []);
 
-  // Effect to get user-specific tasks
+  // กรองเฉพาะงานของ User คนนี้
   useEffect(() => {
     if (userEmail) {
       const filtered = tasks.filter(t => t.requesterEmail.toLowerCase() === userEmail.toLowerCase());
@@ -126,21 +127,21 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail, taskTypeConfi
     }
   }, [tasks, userEmail]);
 
-  // Effect for filtering and sorting logic
+  // Logic การกรองและเรียงลำดับ
   useEffect(() => {
     let processedTasks = [...userTasks];
 
-    // 1. Filter by Status (only if visible)
+    // 1. กรองตามสถานะ
     if (isStatusVisible && filters.status !== 'all') {
       processedTasks = processedTasks.filter(t => t.status === filters.status);
     }
     
-    // 2. Filter by Type
+    // 2. กรองตามประเภท
     if (filters.type !== 'all') {
         processedTasks = processedTasks.filter(t => t.taskType === filters.type);
     }
 
-    // 3. Filter by Search Term
+    // 3. ค้นหา
     if (searchTerm.trim()) {
       const lowercasedSearch = searchTerm.toLowerCase();
       processedTasks = processedTasks.filter(t => 
@@ -150,7 +151,7 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail, taskTypeConfi
       );
     }
     
-    // 4. Sort
+    // 4. เรียงลำดับ
     processedTasks.sort((a, b) => {
         switch (filters.sortOrder) {
             case 'oldest': return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();

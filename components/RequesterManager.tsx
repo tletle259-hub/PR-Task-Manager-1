@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEdit, FiTrash2, FiSave, FiXCircle, FiKey, FiUser, FiAlertTriangle, FiSearch, FiMail, FiBriefcase } from 'react-icons/fi';
@@ -112,6 +113,7 @@ const RequesterManager: React.FC<RequesterManagerProps> = ({ users, updateUser, 
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [departments, setDepartments] = useState<string[]>([]);
 
+  // โหลดแผนก
   useEffect(() => {
     const unsubscribe = onDepartmentsUpdate((depts: Department[]) => {
         setDepartments(depts.map(d => d.name));
@@ -127,8 +129,8 @@ const RequesterManager: React.FC<RequesterManagerProps> = ({ users, updateUser, 
     return Array.from(optionSet).sort();
   }, [departments, editingUser]);
 
+  // Update Username เมื่อแก้ไขชื่อภาษาอังกฤษ
   useEffect(() => {
-    // This effect derives the username from the English names when editing
     if (editingUser) {
         const { firstNameEn = '', lastNameEn = '' } = editingUser;
         if (firstNameEn && lastNameEn && lastNameEn.length >= 2) {

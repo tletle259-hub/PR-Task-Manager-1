@@ -1,12 +1,12 @@
+
 import React, { useState } from 'react';
-// Fix: Import Variants type from framer-motion to resolve type error.
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { FiMessageCircle, FiX, FiSend, FiUser, FiMail, FiMessageSquare, FiPhone } from 'react-icons/fi';
 import { ContactMessage } from '../types';
 import { addContactMessage } from '../services/contactService';
 
 
-// A reusable input field component to maintain style consistency
+// Input Component ใช้ซ้ำเพื่อความสวยงาม
 const ContactInputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { icon: React.ReactNode }> = ({ icon, ...props }) => (
     <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>
@@ -14,7 +14,7 @@ const ContactInputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & 
     </div>
 );
 
-// New component for the contact form, exported for use in other parts of the app.
+// ฟอร์มติดต่อเจ้าหน้าที่
 export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitted }) => {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,7 +48,6 @@ export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitte
     } catch (error) {
       console.error("Failed to send message:", error);
       setIsSubmitting(false);
-      // Optionally show an error message to the user
     }
   };
 
@@ -90,10 +89,10 @@ export const ContactForm: React.FC<{ onSubmitted?: () => void }> = ({ onSubmitte
   );
 };
 
+// Main Widget Component (ปุ่มลอย)
 const ContactWidget: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
 
-    // Fix: Explicitly type with Variants to avoid type inference issues with framer-motion.
     const containerVariants: Variants = {
         hidden: { opacity: 0, y: 50, scale: 0.9 },
         visible: { 

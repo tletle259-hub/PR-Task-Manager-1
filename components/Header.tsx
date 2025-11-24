@@ -1,8 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { FiSun, FiMoon, FiMenu, FiBell, FiX, FiClock, FiUserPlus, FiCheckCircle, FiUser, FiInbox } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TeamMember, Notification, NotificationType } from '../types';
 
+// --- NOTIFICATION PANEL (หน้าต่างแจ้งเตือนที่ซ่อนอยู่) ---
 interface NotificationPanelProps {
   notifications: Notification[];
   onNotificationClick: (taskId: string) => void;
@@ -80,7 +82,7 @@ interface HeaderProps {
   onMarkAllRead: () => void;
 }
 
-// Color generation for user icons
+// สร้างสีพื้นหลัง Avatar จากชื่อ
 const BG_COLORS = [
     'bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500', 'bg-fuchsia-500', 
     'bg-pink-500', 'bg-rose-500', 'bg-red-500', 'bg-orange-500', 'bg-amber-500'
@@ -92,17 +94,19 @@ const getColorForString = (str: string) => {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   const index = Math.abs(hash % BG_COLORS.length);
   return BG_COLORS[index];
 };
 
+// --- MAIN HEADER COMPONENT ---
 const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggleSidebar, notifications, onNotificationClick, onDeleteNotification, onClearNotifications, onMarkAllRead }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   
+  // ปิด Notification Panel เมื่อคลิกข้างนอก
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
        if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
@@ -113,6 +117,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // นาฬิกา Realtime
   useEffect(() => {
     const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timerId);
@@ -135,6 +140,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
   return (
     <header className="bg-white dark:bg-dark-card p-4 shadow-sm flex justify-between items-center border-b border-gray-200 dark:border-dark-border">
       <div className="flex items-center gap-2">
+        {/* ปุ่ม Menu สำหรับ Mobile */}
         <button
             onClick={toggleSidebar}
             aria-label="Open menu"
@@ -147,7 +153,9 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
             <p className="text-xs sm:text-sm text-gray-500 dark:text-dark-text-muted hidden sm:block">{formattedDateTime}</p>
         </div>
       </div>
+      
       <div className="flex items-center gap-2 sm:gap-4">
+        {/* ปุ่มเปลี่ยน Theme */}
         <button
           onClick={toggleTheme}
           className="icon-interactive p-2 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-dark-muted dark:hover:bg-dark-border transition-colors"
@@ -155,6 +163,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
           {theme === 'light' ? <FiMoon size={20} /> : <FiSun size={20} />}
         </button>
 
+        {/* ปุ่มแจ้งเตือน */}
         <div className="relative" ref={notificationsRef}>
           <div className="relative inline-block">
             <button
@@ -183,6 +192,7 @@ const Header: React.FC<HeaderProps> = ({ theme, toggleTheme, currentUser, toggle
           </AnimatePresence>
         </div>
         
+        {/* โปรไฟล์ผู้ใช้ */}
         <div className="flex items-center gap-2 p-1.5 rounded-lg">
              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getColorForString(currentUser.id)} flex-shrink-0`}>
                 <FiUser size={20} className="text-white" />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiXCircle, FiBriefcase, FiLink, FiChevronsRight } from 'react-icons/fi';
-import { Task, TeamMember, TaskStatus, TaskType, Note } from '../types';
+import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiBriefcase, FiLink, FiChevronsRight } from 'react-icons/fi';
+import { Task, TeamMember, TaskStatus, Note, TaskType } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 import Confetti from './Confetti';
 import { onTasksUpdate } from '../services/taskService';
@@ -15,6 +15,7 @@ interface TaskModalProps {
   onSelectTask: (task: Task) => void;
 }
 
+// Helper Components สำหรับจัดหน้าตา
 const Section: React.FC<{ title: string, children: React.ReactNode, card?: boolean }> = ({ title, children, card = false }) => (
     <div>
         <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{title}</h4>
@@ -50,6 +51,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
       setEditedTask(task);
   }, [task]);
 
+  // ถ้าเป็นงานแบบโปรเจกต์ ให้โหลดงานย่อยอื่นๆ มาแสดงด้วย
   useEffect(() => {
       if(task.projectId) {
           const unsubscribe = onTasksUpdate((allTasks) => {
@@ -113,6 +115,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
 
     setEditedTask(prev => ({ ...prev, status: newStatus }));
 
+    // ถ้าเปลี่ยนเป็นเสร็จสิ้น ให้โชว์พลุฉลอง
     if (newStatus === TaskStatus.COMPLETED && oldStatus !== TaskStatus.COMPLETED) {
         setShowConfetti(true);
         setTimeout(() => {
@@ -256,68 +259,86 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                         {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                 </EditableField>
-                 <EditableField label="กำหนดส่ง">
-                    <input
+
+                <EditableField label="กำหนดส่ง">
+                     <input
                         type="date"
-                        value={editedTask.dueDate.split('T')[0]}
+                        value={editedTask.dueDate}
                         onChange={e => setEditedTask({ ...editedTask, dueDate: e.target.value })}
                         className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none"
                     />
                 </EditableField>
-                <Section title="ข้อมูลงาน" card>
-                    <InfoItem label="วันที่สั่ง" value={new Date(task.timestamp).toLocaleDateString('th-TH')} />
-                    <InfoItem label="ประเภทการสั่งงาน" value={task.requestType} />
-                    <InfoItem label="ประเภทงาน" value={task.taskType === TaskType.OTHER ? task.otherTaskTypeName : task.taskType} />
-                    <InfoItem label="สำหรับคณะ" value={task.committee} />
-                </Section>
-            </div>
-          </div>
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2"><FiMessageSquare />หมายเหตุของทีม</h4>
-            <div className="space-y-3 max-h-48 overflow-y-auto pr-2">
-                {editedTask.notes.length > 0 ? editedTask.notes.map((note) => (
-                    <div key={note.id} className="text-sm bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
-                        <div className="flex justify-between items-center mb-2">
-                            <div className="flex items-center gap-2">
-                                <p className="font-semibold text-gray-800 dark:text-gray-200">{note.author}</p>
-                                <p className="text-xs text-gray-500">{new Date(note.timestamp).toLocaleString('th-TH')}</p>
-                            </div>
-                            {editingNote?.id !== note.id && (
-                                <div className="flex items-center gap-1">
-                                    <button onClick={() => handleStartEditNote(note)} className="icon-interactive p-1 text-gray-500 hover:text-blue-500"><FiEdit2 size={14}/></button>
-                                    <button onClick={() => handleDeleteNote(note.id)} className="icon-interactive p-1 text-gray-500 hover:text-red-500"><FiTrash2 size={14}/></button>
+
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                     <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex justify-between items-center">
+                        <span><FiMessageSquare className="inline mr-2"/> บันทึกช่วยจำ / ความคืบหน้า</span>
+                     </h4>
+                     
+                     <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                        {editedTask.notes.length === 0 && <p className="text-sm text-gray-400 italic">ยังไม่มีบันทึก</p>}
+                        {editedTask.notes.map(note => (
+                            <div key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-900/30 text-sm relative group">
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-bold text-gray-700 dark:text-gray-300">{note.author}</span>
+                                    <span className="text-xs text-gray-500">{new Date(note.timestamp).toLocaleString('th-TH')}</span>
                                 </div>
-                            )}
-                        </div>
-                         {editingNote?.id === note.id ? (
-                            <div>
-                                <textarea value={editingNote.text} onChange={(e) => setEditingNote({...editingNote, text: e.target.value})} rows={2} className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 focus:ring-1 focus:ring-brand-primary focus:outline-none"/>
-                                <div className="flex justify-end gap-2 mt-2">
-                                    <button onClick={handleCancelEditNote} className="icon-interactive p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full"><FiXCircle size={18}/></button>
-                                    <button onClick={handleSaveNote} className="icon-interactive p-2 text-green-600 hover:bg-green-100 dark:hover:bg-green-900 rounded-full"><FiSave size={18}/></button>
+                                {editingNote?.id === note.id ? (
+                                    <div className="mt-2">
+                                        <textarea 
+                                            value={editingNote.text} 
+                                            onChange={e => setEditingNote({...editingNote, text: e.target.value})}
+                                            className="w-full p-2 border rounded text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-700"
+                                            rows={2}
+                                        />
+                                        <div className="flex justify-end gap-2 mt-2">
+                                            <button onClick={handleCancelEditNote} className="text-xs text-gray-500">ยกเลิก</button>
+                                            <button onClick={handleSaveNote} className="text-xs text-blue-500 font-bold">บันทึก</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{note.text}</p>
+                                )}
+                                
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 dark:bg-black/50 rounded-md shadow-sm">
+                                    <button onClick={() => handleStartEditNote(note)} className="p-1 text-blue-500 hover:text-blue-700" title="แก้ไข"><FiEdit2 size={12}/></button>
+                                    <button onClick={() => handleDeleteNote(note.id)} className="p-1 text-red-500 hover:text-red-700" title="ลบ"><FiTrash2 size={12}/></button>
                                 </div>
                             </div>
-                         ) : (
-                            <p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{note.text}</p>
-                         )}
-                    </div>
-                )) : <p className="text-sm text-gray-500 italic text-center py-4">ยังไม่มีหมายเหตุ</p>}
-            </div>
-             <div className="flex gap-2 mt-4">
-                <textarea value={newNoteText} onChange={e => setNewNoteText(e.target.value)} placeholder="เพิ่มหมายเหตุใหม่..." rows={2} className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none"/>
-                <button onClick={handleAddNote} className="icon-interactive px-5 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors self-start">เพิ่ม</button>
+                        ))}
+                     </div>
+
+                     <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={newNoteText}
+                            onChange={e => setNewNoteText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleAddNote()}
+                            placeholder="พิมพ์บันทึก..."
+                            className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                        />
+                        <button 
+                            onClick={handleAddNote}
+                            disabled={!newNoteText.trim()}
+                            className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                            ส่ง
+                        </button>
+                     </div>
+                </div>
+
             </div>
           </div>
         </main>
-
-        <footer className="p-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-end gap-4 flex-shrink-0 bg-gray-50 dark:bg-gray-800/50">
-          <button onClick={onClose} className="icon-interactive px-6 py-2.5 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 font-semibold rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">
-            ยกเลิก
+        
+        <footer className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3 flex-shrink-0 bg-gray-50 dark:bg-gray-800 rounded-b-2xl">
+          <button onClick={onClose} className="px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+            ปิด
           </button>
-          <button onClick={handleSave} className="icon-interactive px-8 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg">
-            บันทึก
+          <button onClick={handleSave} className="px-5 py-2.5 rounded-lg bg-brand-primary text-white font-bold hover:bg-blue-700 shadow-md transition-colors flex items-center gap-2">
+            <FiSave /> บันทึกการเปลี่ยนแปลง
           </button>
         </footer>
+
       </motion.div>
     </motion.div>
   );

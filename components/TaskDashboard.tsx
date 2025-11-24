@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiLayout } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
@@ -268,7 +268,7 @@ const FilterSection: React.FC<{title: string; children: React.ReactNode}> = ({ti
 
 // --- TASK VIEW COMPONENTS ---
 
-type ViewMode = 'card' | 'list' | 'column';
+type ViewMode = 'card' | 'list';
 
 interface TaskDashboardProps {
   tasks: Task[];
@@ -302,7 +302,6 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
                     <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <span style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-3 py-1 text-xs font-semibold rounded-full`}>{taskTypeName}</span>
-                        {!isCompact && <div className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>{task.status}</div>}
                     </div>
                 </div>
                 
@@ -316,18 +315,15 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
                 )}
                 
                 <h3 className="font-bold text-lg mt-1 truncate">{task.taskTitle}</h3>
-                {!isCompact && <p className="text-sm text-gray-500 dark:text-dark-text-muted h-10 overflow-hidden text-ellipsis">{task.taskDescription}</p>}
-                <div className="mt-3 text-xs text-gray-500 dark:text-dark-text-muted">
-                    <p><strong>ผู้ขอ:</strong> {task.requesterName} ({task.department})</p>
-                </div>
+                {!isCompact && (
+                    <div className="mt-1 text-sm text-gray-500 dark:text-dark-text-muted">
+                        <p><span className="font-semibold">ผู้ขอ:</span> {task.requesterName} ({task.department})</p>
+                    </div>
+                )}
             </div>
             <div className={`mt-4 pt-4 border-t border-gray-100 dark:border-dark-border p-5 ${isCompact ? 'bg-white dark:bg-dark-card' : 'bg-gray-50 dark:bg-dark-card/50'}`}>
                 <div className="flex justify-between items-end text-sm">
                      <div className="space-y-1">
-                        {!isCompact && <div className="flex items-center gap-2 text-gray-500 dark:text-dark-text-muted text-xs">
-                            <FiCalendar size={14} />
-                            <span>วันที่สั่ง: {new Date(task.timestamp).toLocaleDateString('th-TH')}</span>
-                        </div>}
                         <div className="flex items-center gap-2 text-red-500 font-medium">
                             <FiCalendar size={14} />
                             <span>กำหนดส่ง: {new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
@@ -448,6 +444,21 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
     }
   }, [initialFilters, clearInitialFilters]);
   
+  const statusCounts = useMemo(() => {
+    const counts = {
+        [TaskStatus.NOT_STARTED]: 0,
+        [TaskStatus.IN_PROGRESS]: 0,
+        [TaskStatus.COMPLETED]: 0,
+        [TaskStatus.CANCELLED]: 0,
+    };
+    tasks.forEach(t => {
+        if (Object.values(TaskStatus).includes(t.status)) {
+            counts[t.status] = (counts[t.status] || 0) + 1;
+        }
+    });
+    return counts;
+  }, [tasks]);
+
   const availableYears = useMemo(() => {
     const years = new Set(tasks.map(t => new Date(t.timestamp).getFullYear()));
     if (!years.has(new Date().getFullYear())) {
@@ -534,6 +545,14 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
       setDateFilter(newDateFilter);
   };
 
+  const handleStatusClick = (status: TaskStatus) => {
+    if (filters.status === status) {
+        setFilters(prev => ({ ...prev, status: 'all' }));
+    } else {
+        setFilters(prev => ({ ...prev, status }));
+    }
+  };
+
   const getStatusPillColor = (status: string) => {
     switch (status) {
         case TaskStatus.NOT_STARTED: return 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200';
@@ -586,41 +605,6 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
                     ))}
                   </div>
               );
-
-          case 'column':
-               const columnOrder: TaskStatus[] = [TaskStatus.NOT_STARTED, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED];
-               const tasksByStatus = columnOrder.reduce((acc, status) => {
-                   acc[status] = filteredAndSortedTasks.filter(t => t.status === status);
-                   return acc;
-               }, {} as Record<TaskStatus, Task[]>);
-
-              return (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-                    {columnOrder.map(status => (
-                        <div key={status} className="bg-gray-100 dark:bg-dark-bg rounded-lg p-3">
-                            <h3 className="font-bold text-center mb-3 p-2 rounded-md text-white" style={{ backgroundColor: TASK_STATUS_COLORS[status].replace('bg-', '').split('-')[0] }}>
-                                {status} ({tasksByStatus[status].length})
-                            </h3>
-                            <div className="space-y-3 h-[calc(100vh-20rem)] overflow-y-auto p-1">
-                                <AnimatePresence>
-                                {tasksByStatus[status].map(task => (
-                                    <TaskCard
-                                        key={task.id}
-                                        task={task}
-                                        teamMembers={teamMembers}
-                                        taskTypeConfigs={taskTypeConfigs}
-                                        onSelectTask={onSelectTask}
-                                        onToggleStar={() => handleToggleStar(task.id)}
-                                        onDelete={() => setTaskToDelete(task)}
-                                        isCompact={true}
-                                    />
-                                ))}
-                                </AnimatePresence>
-                            </div>
-                        </div>
-                    ))}
-                  </div>
-              );
               
           case 'card':
           default:
@@ -668,11 +652,10 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
           </div>
            <div className="flex items-center gap-2 flex-shrink-0">
                 <div className="p-1 bg-gray-200 dark:bg-dark-bg rounded-lg flex items-center">
-                    {(['card', 'list', 'column'] as ViewMode[]).map(mode => (
+                    {(['card', 'list'] as ViewMode[]).map(mode => (
                         <button key={mode} onClick={() => setViewMode(mode)} className={`p-2 rounded-md transition-colors ${viewMode === mode ? 'bg-white dark:bg-dark-muted shadow' : 'text-gray-500 dark:text-dark-text-muted hover:bg-white/50 dark:hover:bg-dark-muted/50'}`}>
                            {mode === 'card' && <FiGrid />}
                            {mode === 'list' && <FiList />}
-                           {mode === 'column' && <FiLayout />}
                         </button>
                     ))}
                 </div>
@@ -739,6 +722,41 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
             </motion.div>
         )}
         </AnimatePresence>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <button 
+            onClick={() => handleStatusClick(TaskStatus.NOT_STARTED)}
+            className={`p-3 rounded-lg font-bold text-white transition-all ${
+                filters.status === TaskStatus.NOT_STARTED 
+                ? 'bg-gray-600 ring-2 ring-offset-2 ring-gray-500 shadow-lg scale-105' 
+                : 'bg-gray-500 hover:bg-gray-600 opacity-80 hover:opacity-100'
+            }`}
+        >
+            {TaskStatus.NOT_STARTED} ({statusCounts[TaskStatus.NOT_STARTED]})
+        </button>
+        
+        <button 
+            onClick={() => handleStatusClick(TaskStatus.IN_PROGRESS)}
+            className={`p-3 rounded-lg font-bold transition-all ${
+                filters.status === TaskStatus.IN_PROGRESS 
+                ? 'bg-yellow-400 text-gray-900 ring-2 ring-offset-2 ring-yellow-400 shadow-lg scale-105' 
+                : 'bg-yellow-400 text-gray-900 hover:bg-yellow-500 opacity-80 hover:opacity-100'
+            }`}
+        >
+            {TaskStatus.IN_PROGRESS} ({statusCounts[TaskStatus.IN_PROGRESS]})
+        </button>
+
+        <button 
+            onClick={() => handleStatusClick(TaskStatus.COMPLETED)}
+            className={`p-3 rounded-lg font-bold text-white transition-all ${
+                filters.status === TaskStatus.COMPLETED 
+                ? 'bg-green-600 ring-2 ring-offset-2 ring-green-500 shadow-lg scale-105' 
+                : 'bg-green-600 hover:bg-green-700 opacity-80 hover:opacity-100'
+            }`}
+        >
+            {TaskStatus.COMPLETED} ({statusCounts[TaskStatus.COMPLETED]})
+        </button>
       </div>
 
       <AnimatePresence mode="wait">

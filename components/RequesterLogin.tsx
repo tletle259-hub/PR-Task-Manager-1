@@ -24,6 +24,7 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
     setError('');
 
     try {
+      // เรียกใช้ฟังก์ชัน Login แบบ Custom (Username/Password)
       const userProfile = await loginWithUsernamePassword(username.trim(), password.trim());
       if (userProfile) {
         onLoginSuccess(userProfile);
@@ -34,6 +35,7 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
       console.error("Login error:", err);
       const msg = err.message || '';
       
+      // ดักจับ Error เรื่อง Permission เพื่อแนะนำผู้ใช้ให้แก้ Database Rules
       if (msg.includes('permission-denied') || msg.includes('Missing or insufficient permissions')) {
          setError('Permission Denied! ฐานข้อมูลถูกล็อคอยู่\nกรุณาไปที่ Firebase Console > Rules\nเช็คว่ามี allow read, write: if true; \nและอย่าลืมกดปุ่ม "Publish" (เผยแพร่) ที่มุมขวาบน!');
       } else {
@@ -56,6 +58,7 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
         <p className="text-gray-500 dark:text-gray-400">กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ</p>
       </div>
 
+      {/* แบบฟอร์ม Username/Password */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="relative">
           <FiUser className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -100,6 +103,7 @@ const RequesterLoginForm: React.FC<RequesterLoginProps> = ({ onLoginSuccess, onM
         </button>
       </form>
       
+      {/* ตัวเลือก Login อื่นๆ */}
       <div className="flex items-center my-4">
         <hr className="flex-grow border-gray-300 dark:border-gray-600" />
         <span className="mx-4 text-gray-500 dark:text-gray-400 text-sm">หรือ</span>

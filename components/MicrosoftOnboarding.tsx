@@ -28,8 +28,9 @@ const InputField: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label
     </div>
 );
 
-
+// Component สำหรับกรอกข้อมูลเพิ่มเติมเมื่อ Login ด้วย Microsoft ครั้งแรก
 const MicrosoftOnboarding: React.FC<MicrosoftOnboardingProps> = ({ msalAccount, onComplete, onCancel }) => {
+    // แยกชื่อ นามสกุล จาก MSAL Account (ถ้ามี)
     const nameParts = msalAccount.name?.split(' ') || ['',''];
     const firstNameEn = nameParts[0];
     const lastNameEn = nameParts.slice(1).join(' ');

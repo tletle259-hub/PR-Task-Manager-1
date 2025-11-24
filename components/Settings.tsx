@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle, FiTag, FiClock, FiList } from 'react-icons/fi';
@@ -5,7 +6,8 @@ import { Department, TaskTypeConfig } from '../types';
 import { onDepartmentsUpdate, addDepartment, updateDepartment, deleteDepartment, onTaskTypeConfigsUpdate, addTaskTypeConfig, updateTaskTypeConfig, deleteTaskTypeConfig } from '../services/departmentService';
 
 
-// --- CONFIRMATION MODAL COMPONENT ---
+// --- COMPONENT: CONFIRMATION MODAL ---
+// หน้าต่างยืนยันการกระทำ
 interface ConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
@@ -84,6 +86,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 };
 
 
+// --- COMPONENT: DEPARTMENT MANAGER ---
+// จัดการรายชื่อแผนก
 const DepartmentManager: React.FC = () => {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [newDepartmentName, setNewDepartmentName] = useState('');
@@ -181,6 +185,8 @@ const DepartmentManager: React.FC = () => {
 };
 
 
+// --- COMPONENT: TASK TYPE MANAGER ---
+// จัดการประเภทงาน
 const TaskTypeManager: React.FC = () => {
     const [configs, setConfigs] = useState<TaskTypeConfig[]>([]);
     const [newConfig, setNewConfig] = useState({ name: '', dailyLimit: '', leadTimeDays: '' });

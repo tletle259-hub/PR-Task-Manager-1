@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -26,6 +27,7 @@ interface OverviewDashboardProps {
   onSelectTask: (task: Task) => void;
 }
 
+// การ์ดแสดงสถิติตัวเลข
 const StatCard: React.FC<{ icon: React.ReactNode; title: string; value: string | number; gradient: string; onClick?: () => void }> = ({ icon, title, value, gradient, onClick }) => (
   <motion.div 
     whileHover={{ y: -5, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)' }}
@@ -54,7 +56,7 @@ const getColorForString = (str: string) => {
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   const index = Math.abs(hash % BG_COLORS.length);
   return BG_COLORS[index];
@@ -70,6 +72,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
   const [exportStartDate, setExportStartDate] = useState(() => formatToYyyyMmDd(new Date(new Date().getFullYear(), 0, 1)));
   const [exportEndDate, setExportEndDate] = useState(() => formatToYyyyMmDd(new Date()));
   
+  // คำนวณปีที่มีข้อมูล
   const availableYears = useMemo(() => {
     const years = new Set(tasks.map(t => new Date(t.timestamp).getFullYear()));
     if (!years.has(new Date().getFullYear())) {
@@ -78,6 +81,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
     return Array.from(years).sort((a, b) => Number(b) - Number(a));
   }, [tasks]);
 
+  // กรองงานตามช่วงเวลาที่เลือก
   const filteredTasks = useMemo(() => {
     if (filterMode === 'all') return tasks;
     return tasks.filter(task => {
@@ -96,12 +100,14 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
   }, [tasks, filterMode, selectedYear, selectedMonth, selectedDate]);
 
 
+  // คำนวณสถิติ
   const totalTasks = filteredTasks.length;
   const completedTasks = filteredTasks.filter(t => t.status === TaskStatus.COMPLETED).length;
   const inProgressTasks = filteredTasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
   const notStartedTasks = filteredTasks.filter(t => t.status === TaskStatus.NOT_STARTED).length;
   const cancelledTasks = filteredTasks.filter(t => t.status === TaskStatus.CANCELLED).length;
 
+  // ข้อมูลสำหรับกราฟวงกลม
   const statusData = [
     { name: TaskStatus.COMPLETED, value: completedTasks, color: '#10b981' },
     { name: TaskStatus.IN_PROGRESS, value: inProgressTasks, color: '#f59e0b' },
@@ -109,6 +115,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
     { name: TaskStatus.CANCELLED, value: cancelledTasks, color: '#ef4444' },
   ];
 
+  // ข้อมูลสำหรับกราฟแท่ง
   const taskTypeData = taskTypeConfigs
     .map(config => ({
       name: config.name,
@@ -167,6 +174,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         return `Task_Summary_Report_${exportStartDate}_to_${exportEndDate}`;
     };
 
+    // ส่งออกเป็น CSV
     const handleExportCSV = () => {
         if (!exportStartDate || !exportEndDate) {
             alert("กรุณาเลือกช่วงวันที่ก่อนส่งออกรายงาน");
@@ -228,6 +236,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         document.body.removeChild(link);
     };
 
+    // ส่งออกเป็น Word (HTML Format)
     const handleExportDOC = () => {
         if (!exportStartDate || !exportEndDate) {
             alert("กรุณาเลือกช่วงวันที่ก่อนส่งออกรายงาน");
@@ -266,7 +275,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
                     "สถานะ": t.status,
                 })),
             };
-        }).filter(m => m.summary["งานที่รับผิดชอบ"] > 0); // Only include members with tasks in the range
+        }).filter(m => m.summary["งานที่รับผิดชอบ"] > 0);
 
         // --- HTML Generation ---
         const reportTitle = "สรุปรายงานภาระงานส่วนงานสื่อสารองค์กร";
@@ -350,6 +359,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
 
   return (
     <div className="space-y-6">
+        {/* Filter Bar */}
         <div className="bg-white dark:bg-dark-card p-4 rounded-xl shadow-lg interactive-glow">
             <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-dark-bg/50 rounded-lg">
@@ -391,6 +401,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
             </div>
         </div>
 
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          <StatCard icon={<FiArchive size={24}/>} title="งานทั้งหมด (ที่กรอง)" value={totalTasks} gradient="bg-gradient-to-br from-purple-500 to-indigo-600" />
          <StatCard icon={<FiUsers size={24} />} title="สมาชิกในทีม" value={teamMembers.length} gradient="bg-gradient-to-br from-sky-500 to-cyan-500" />
@@ -402,6 +413,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         <StatCard icon={<FiXCircle size={24}/>} title="ยกเลิก" value={cancelledTasks} gradient="bg-gradient-to-br from-red-500 to-rose-600" onClick={() => onSetFilters({ status: TaskStatus.CANCELLED })} />
       </div>
 
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
           <h3 className="font-bold text-lg mb-4">สัดส่วนสถานะงาน</h3>
@@ -433,6 +445,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         </div>
       </div>
       
+      {/* Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
@@ -485,6 +498,8 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
           </ul>
         </div>
       </div>
+
+      {/* Export Panel */}
       <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow mt-6">
             <h3 className="text-xl font-bold mb-2">ส่งออกรายงานสรุป</h3>
             <p className="text-sm text-gray-500 dark:text-dark-text-muted mb-4">
