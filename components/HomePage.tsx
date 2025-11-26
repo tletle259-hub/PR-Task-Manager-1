@@ -85,7 +85,7 @@ const HomePage: React.FC<HomePageProps> = ({
             {/* โลโก้และชื่อระบบ */}
             <div className="flex justify-center items-center gap-4 text-center">
                  <img 
-                    src="https://eservice.tfac.or.th/check_member/assets/images/logo.png" 
+                    src="https://www.tfac.or.th/upload/9414/c0sN1HN2j5.png" 
                     alt="Logo สภาวิชาชีพบัญชี" 
                     className="w-16 h-16 object-contain"
                 />

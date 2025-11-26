@@ -251,8 +251,8 @@ const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onLo
                 active={view === 'tasks'} 
                 onMainClick={() => { onSetFilters({}); handleNavClick('tasks'); }}
               >
-                {Object.values(TaskStatus).map(status => (
-                  <NavSubItem key={status} label={status} onClick={() => handleFilterClick(status)} isActive={activeFilters.status === status} />
+                {(Object.values(TaskStatus) as string[]).map(status => (
+                  <NavSubItem key={status} label={status} onClick={() => handleFilterClick(status as TaskStatus)} isActive={activeFilters.status === status} />
                 ))}
               </NavDropdown>
 
@@ -493,7 +493,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     return (
         <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-dark-bg">
             <div className="text-center">
-                <p className="text-xl font-semibold text-gray-700 dark:text-dark-text">กำลังเชื่อมต่อฐานข้อมูล...</p>
+                <p className="text-xl font-semibold text-gray-700 dark:text-dark-text">กำลังเชื่อมต่อฐานข้อมูล...<br />โปรดรอสักครู่...</p>
             </div>
         </div>
     );

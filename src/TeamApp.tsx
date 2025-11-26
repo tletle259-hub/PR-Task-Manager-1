@@ -231,7 +231,7 @@ const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onLo
             >
                 <div className="flex items-center gap-3">
                     <img 
-                        src="https://eservice.tfac.or.th/check_member/assets/images/logo.png" 
+                        src="https://www.tfac.or.th/upload/9414/c0sN1HN2j5.png" 
                         alt="Logo สภาวิชาชีพบัญชี" 
                         className="w-12 h-12 object-contain flex-shrink-0 bg-gray-100 dark:bg-white/10 rounded-md p-1"
                     />
