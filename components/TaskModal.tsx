@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiBriefcase, FiLink, FiChevronsRight } from 'react-icons/fi';
+import { FiX, FiPaperclip, FiMessageSquare, FiEdit2, FiTrash2, FiSave, FiBriefcase, FiLink, FiChevronsRight, FiPlus, FiUserPlus, FiUser, FiAlertTriangle } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, Note, TaskType } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 import Confetti from './Confetti';
@@ -41,14 +42,51 @@ const EditableField: React.FC<{ label: string, children: React.ReactNode }> = ({
 
 
 const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSave, currentUser, onSelectTask }) => {
-  const [editedTask, setEditedTask] = useState<Task>(task);
+  // Initialize state with normalized data immediately to prevent render crashes
+  const [editedTask, setEditedTask] = useState<Task>(() => {
+      const initializedTask = { ...task };
+      if (!initializedTask.assigneeIds) {
+          // @ts-ignore: handle legacy data
+          if (initializedTask.assigneeId) {
+             // @ts-ignore
+             initializedTask.assigneeIds = [initializedTask.assigneeId];
+          } else {
+             initializedTask.assigneeIds = [''];
+          }
+      } else if (initializedTask.assigneeIds.length === 0) {
+          initializedTask.assigneeIds = ['']; // Default to one empty slot
+      }
+      return initializedTask;
+  });
+
   const [newNoteText, setNewNoteText] = useState('');
   const [editingNote, setEditingNote] = useState<{ id: string, text: string } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
   const [projectTasks, setProjectTasks] = useState<Task[]>([]);
+  
+  // State for Cancellation Logic
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
+  // Sync state if prop task changes completely (unlikely in modal but good practice)
   useEffect(() => {
-      setEditedTask(task);
+      setEditedTask(prev => {
+          if (prev.id !== task.id) {
+              const initializedTask = { ...task };
+              if (!initializedTask.assigneeIds || initializedTask.assigneeIds.length === 0) {
+                  // @ts-ignore
+                  if (initializedTask.assigneeId) {
+                      // @ts-ignore
+                      initializedTask.assigneeIds = [initializedTask.assigneeId];
+                  } else {
+                      initializedTask.assigneeIds = [''];
+                  }
+              }
+              return initializedTask;
+          }
+          return prev;
+      });
+      setCancelReason(task.cancellationReason || '');
   }, [task]);
 
   // ถ้าเป็นงานแบบโปรเจกต์ ให้โหลดงานย่อยอื่นๆ มาแสดงด้วย
@@ -65,7 +103,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
 
 
   const handleSave = () => {
-    onSave(editedTask);
+    // Filter out empty assignee strings before saving
+    const cleanedTask = {
+        ...editedTask,
+        assigneeIds: editedTask.assigneeIds.filter(id => id && id.trim() !== '')
+    };
+    onSave(cleanedTask);
   };
   
   const handleAddNote = () => {
@@ -113,6 +156,12 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
     const newStatus = e.target.value as TaskStatus;
     const oldStatus = editedTask.status;
 
+    if (newStatus === TaskStatus.CANCELLED) {
+        // If selecting CANCELLED, show modal instead of updating immediately
+        setShowCancelReasonModal(true);
+        return;
+    }
+
     setEditedTask(prev => ({ ...prev, status: newStatus }));
 
     // ถ้าเปลี่ยนเป็นเสร็จสิ้น ให้โชว์พลุฉลอง
@@ -122,6 +171,44 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
             setShowConfetti(false);
         }, 2000);
     }
+  };
+
+  const confirmCancellation = () => {
+      setEditedTask(prev => ({
+          ...prev,
+          status: TaskStatus.CANCELLED,
+          cancellationReason: cancelReason
+      }));
+      setShowCancelReasonModal(false);
+  };
+
+  const cancelCancellation = () => {
+      setShowCancelReasonModal(false);
+      // Reset logic handled by keeping the original status in state until confirmed
+  };
+
+  const handleAddAssignee = () => {
+      setEditedTask(prev => ({
+          ...prev,
+          assigneeIds: [...prev.assigneeIds, '']
+      }));
+  };
+
+  const handleAssigneeChange = (index: number, value: string) => {
+      const newAssignees = [...editedTask.assigneeIds];
+      newAssignees[index] = value;
+      setEditedTask(prev => ({ ...prev, assigneeIds: newAssignees }));
+  };
+
+  const handleRemoveAssignee = (index: number) => {
+      const newAssignees = [...editedTask.assigneeIds];
+      if (newAssignees.length === 1) {
+          // If it's the last one, just clear the value, don't remove the input
+          newAssignees[0] = '';
+      } else {
+          newAssignees.splice(index, 1);
+      }
+      setEditedTask(prev => ({ ...prev, assigneeIds: newAssignees }));
   };
   
   return (
@@ -140,7 +227,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: "100vh", opacity: 0 }}
         transition={{ type: 'spring', damping: 30, stiffness: 200 }}
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col relative"
         onClick={e => e.stopPropagation()}
       >
         <header className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-start flex-shrink-0">
@@ -178,7 +265,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                         <p className="text-xs text-gray-500 mb-2">แสดงรายการงานย่อยอื่น ๆ ในโปรเจกต์เดียวกัน (คลิกเพื่อดูรายละเอียด)</p>
                         <ul className="space-y-2">
                            {projectTasks.map(pt => {
-                                const assignee = teamMembers.find(m => m.id === pt.assigneeId);
+                                const assigneeIds = pt.assigneeIds || [];
+                                const assignees = teamMembers.filter(m => assigneeIds.includes(m.id)).map(m => m.name).join(', ');
                                 const taskTypeName = pt.taskType === TaskType.OTHER ? pt.otherTaskTypeName : pt.taskType;
 
                                 return (
@@ -197,7 +285,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-5">
                                                         <span>ประเภท: {taskTypeName}</span>
                                                         <span className="mx-2">|</span>
-                                                        <span>ผู้รับผิดชอบ: {assignee ? assignee.name : 'ยังไม่มอบหมาย'}</span>
+                                                        <span>ผู้รับผิดชอบ: {assignees || 'ยังไม่มอบหมาย'}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -238,6 +326,14 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                         <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 p-4 border rounded-lg bg-gray-50 dark:bg-gray-700/30">{task.additionalNotes}</p>
                     </Section>
                 )}
+                
+                {(editedTask.status === TaskStatus.CANCELLED && editedTask.cancellationReason) && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-lg">
+                        <h4 className="text-red-700 dark:text-red-300 font-bold mb-2 flex items-center gap-2"><FiAlertTriangle/> เหตุผลที่ยกเลิก</h4>
+                        <p className="text-red-600 dark:text-red-200 text-sm">{editedTask.cancellationReason}</p>
+                        <button onClick={() => setShowCancelReasonModal(true)} className="text-xs text-red-500 hover:underline mt-2">แก้ไขเหตุผล</button>
+                    </div>
+                )}
             </div>
             <div className="lg:col-span-2 space-y-6">
                  <EditableField label="สถานะ">
@@ -250,14 +346,40 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                     </select>
                 </EditableField>
                 <EditableField label="ผู้รับผิดชอบ">
-                     <select
-                        value={editedTask.assigneeId || ''}
-                        onChange={e => setEditedTask({ ...editedTask, assigneeId: e.target.value || null })}
-                        className="w-full mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none"
-                    >
-                        <option value="">ยังไม่มอบหมาย</option>
-                        {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
+                    <div className="space-y-3">
+                        {(editedTask.assigneeIds || []).map((assigneeId, index) => (
+                            <div key={index} className="flex gap-2 items-center">
+                                <div className="relative w-full">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+                                        <FiUser size={16}/>
+                                    </div>
+                                    <select
+                                        value={assigneeId}
+                                        onChange={e => handleAssigneeChange(index, e.target.value)}
+                                        className="w-full pl-10 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none text-sm appearance-none"
+                                    >
+                                        <option value="">{index === 0 ? "ยังไม่มอบหมาย (เลือกผู้รับผิดชอบ)" : "เลือกผู้รับผิดชอบร่วม"}</option>
+                                        {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name} ({m.position})</option>)}
+                                    </select>
+                                </div>
+                                {(editedTask.assigneeIds.length > 1 || assigneeId !== '') && (
+                                    <button 
+                                        onClick={() => handleRemoveAssignee(index)} 
+                                        className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors flex-shrink-0 border border-transparent hover:border-red-200"
+                                        title={editedTask.assigneeIds.length === 1 ? "ล้างข้อมูล" : "ลบผู้รับผิดชอบนี้"}
+                                    >
+                                        {editedTask.assigneeIds.length === 1 ? <FiX size={18}/> : <FiTrash2 size={18}/>}
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <button 
+                            onClick={handleAddAssignee}
+                            className="w-full py-2 text-sm font-semibold text-brand-primary border border-dashed border-brand-primary/50 rounded-lg hover:bg-brand-primary/5 flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <FiUserPlus /> เพิ่มผู้รับผิดชอบร่วม
+                        </button>
+                    </div>
                 </EditableField>
 
                 <EditableField label="กำหนดส่ง">
@@ -338,6 +460,48 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
             <FiSave /> บันทึกการเปลี่ยนแปลง
           </button>
         </footer>
+
+        {/* Cancellation Reason Modal Overlay */}
+        <AnimatePresence>
+            {showCancelReasonModal && (
+                <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center p-4 rounded-2xl"
+                >
+                    <motion.div 
+                        initial={{ scale: 0.9 }} 
+                        animate={{ scale: 1 }} 
+                        exit={{ scale: 0.9 }}
+                        className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 w-full max-w-md border border-gray-200 dark:border-gray-700"
+                    >
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                            <FiAlertTriangle className="text-red-500"/> ระบุเหตุผลการยกเลิก
+                        </h3>
+                        <textarea
+                            value={cancelReason}
+                            onChange={e => setCancelReason(e.target.value)}
+                            placeholder="กรุณาระบุเหตุผลที่ต้องการยกเลิกงานนี้..."
+                            className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-gray-50 dark:bg-gray-900 dark:text-white resize-none"
+                            autoFocus
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button onClick={cancelCancellation} className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                                ยกเลิก
+                            </button>
+                            <button 
+                                onClick={confirmCancellation} 
+                                disabled={!cancelReason.trim()}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                ยืนยันการยกเลิก
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
       </motion.div>
     </motion.div>

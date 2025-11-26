@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiFileText, FiClock, FiCalendar, FiBriefcase, FiSearch, FiFilter, FiX } from 'react-icons/fi';
+import { FiFileText, FiClock, FiCalendar, FiBriefcase, FiSearch, FiFilter, FiX, FiAlertCircle } from 'react-icons/fi';
 import { Task, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS } from '../constants';
 
@@ -255,6 +255,18 @@ const MyRequests: React.FC<MyRequestsProps> = ({ tasks, userEmail, taskTypeConfi
                 )}
                 </div>
                 <p className="mt-2 text-gray-600 dark:text-gray-400">{task.taskDescription}</p>
+                
+                {/* Cancellation Reason Alert */}
+                {isStatusVisible && task.status === TaskStatus.CANCELLED && task.cancellationReason && (
+                    <div className="mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-3">
+                        <FiAlertCircle className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" size={18} />
+                        <div>
+                            <p className="text-sm font-bold text-red-700 dark:text-red-300">เหตุผลที่ยกเลิก:</p>
+                            <p className="text-sm text-red-600 dark:text-red-200">{task.cancellationReason}</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-2"><FiFileText /> <strong>ประเภท:</strong> {task.taskType === otherTaskTypeName ? task.otherTaskTypeName : task.taskType}</span>
                 <span className="flex items-center gap-2"><FiClock /> <strong>วันที่แจ้ง:</strong> {new Date(task.timestamp).toLocaleDateString('th-TH')}</span>

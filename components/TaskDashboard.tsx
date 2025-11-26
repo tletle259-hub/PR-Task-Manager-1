@@ -281,7 +281,10 @@ interface TaskDashboardProps {
 }
 
 const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; isCompact?: boolean; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isCompact = false }) => {
-    const assignee = teamMembers.find(m => m.id === task.assigneeId);
+    // Handle multiple assignees safely
+    const assigneeIds = task.assigneeIds || [];
+    const assignees = teamMembers.filter(m => assigneeIds.includes(m.id));
+    
     const config = taskTypeConfigs.find(c => c.name === task.taskType);
     const colorHex = config?.colorHex || '#64748b'; // Default slate color
     const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
@@ -329,14 +332,13 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
                             <span>กำหนดส่ง: {new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
                         </div>
                     </div>
-                     <div className="flex items-center gap-2">
-                        {assignee ? (
-                           <>
-                               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getColorForString(assignee.id)} flex-shrink-0`}>
-                                   <FiUser size={14} className="text-white" />
-                               </div>
-                               <span className="text-gray-800 dark:text-dark-text">{assignee.name.split(' ')[0]}</span>
-                           </>
+                     <div className="flex items-center -space-x-2">
+                        {assignees.length > 0 ? (
+                            assignees.map(a => (
+                                <div key={a.id} className={`w-8 h-8 rounded-full flex items-center justify-center ${getColorForString(a.id)} border-2 border-white dark:border-gray-800 shadow-sm`} title={a.name}>
+                                    <span className="text-white text-xs font-bold">{a.name.charAt(0)}</span>
+                                </div>
+                            ))
                         ) : (
                            <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-muted">
                                <FiUser size={14} />
@@ -364,7 +366,9 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
 };
 
 const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete }) => {
-    const assignee = teamMembers.find(m => m.id === task.assigneeId);
+    const assigneeIds = task.assigneeIds || [];
+    const assignees = teamMembers.filter(m => assigneeIds.includes(m.id));
+    
     const config = taskTypeConfigs.find(c => c.name === task.taskType);
     const colorHex = config?.colorHex || '#64748b';
     const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
@@ -397,20 +401,19 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeCo
              <div className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 text-sm w-full lg:w-auto lg:justify-end flex-shrink-0">
                  <div style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-2 py-1 text-xs font-semibold rounded-full text-center w-full sm:w-auto`}>{taskTypeName}</div>
                  
-                 <div className="flex items-center gap-2 min-w-[150px]">
-                     {assignee ? (
-                           <>
-                               <div className={`w-6 h-6 rounded-full flex items-center justify-center ${getColorForString(assignee.id)} flex-shrink-0`}>
-                                   <FiUser size={14} className="text-white" />
-                               </div>
-                               <span className="text-gray-800 dark:text-dark-text truncate">{assignee.name}</span>
-                           </>
-                        ) : (
-                           <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-muted">
-                               <FiUser size={14} />
-                               <span>ยังไม่มอบหมาย</span>
-                           </div>
-                        )}
+                 <div className="flex items-center -space-x-2 min-w-[60px]">
+                     {assignees.length > 0 ? (
+                        assignees.map(a => (
+                            <div key={a.id} className={`w-6 h-6 rounded-full flex items-center justify-center ${getColorForString(a.id)} border-2 border-white dark:border-gray-800`} title={a.name}>
+                                <span className="text-white text-[10px]">{a.name.charAt(0)}</span>
+                            </div>
+                        ))
+                     ) : (
+                         <div className="flex items-center gap-2 text-gray-400 dark:text-dark-text-muted">
+                            <FiUser size={14} />
+                            <span>-</span>
+                        </div>
+                     )}
                  </div>
 
                  <div className={`px-2 py-1 text-xs font-semibold text-white rounded-full ${TASK_STATUS_COLORS[task.status]} w-28 text-center`}>{task.status}</div>
@@ -495,7 +498,8 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
       filtered = filtered.filter(t => t.taskType === filters.type);
     }
     if (filters.assignee !== 'all') {
-      filtered = filtered.filter(t => t.assigneeId === filters.assignee);
+      // Check if the selected assignee is in the list of assignees for the task
+      filtered = filtered.filter(t => (t.assigneeIds || []).includes(filters.assignee));
     }
      if (filters.department !== 'all') {
       filtered = filtered.filter(t => t.department === filters.department);

@@ -253,19 +253,44 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             return { name: file.name, size: file.size, type: file.type };
         });
         const fileData = await Promise.all(attachmentPromises);
-        const existingIds = tasks.map(t => parseInt(t.id.replace('PR', ''), 10)).filter(id => !isNaN(id));
-        let maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
         
+        // --- ID GENERATION LOGIC ---
+        // 1. หาปีปัจจุบัน
+        const currentYear = new Date().getFullYear();
+        
+        // 2. หาเลข ID สูงสุดของปีนี้ โดยดูจากรูปแบบ PRxxx/YYYY
+        let maxId = 0;
+        
+        tasks.forEach(t => {
+            // แยก string ด้วย '/' เช่น "PR001/2025" -> ["PR001", "2025"]
+            const parts = t.id.split('/');
+            
+            if (parts.length === 2) {
+                // ตรวจสอบว่าเป็นปีปัจจุบันหรือไม่
+                const idYear = parseInt(parts[1], 10);
+                if (idYear === currentYear) {
+                    // ดึงตัวเลขออกจากส่วนหน้า (PRxxx)
+                    const numberPart = parts[0].replace('PR', '');
+                    const num = parseInt(numberPart, 10);
+                    
+                    if (!isNaN(num) && num > maxId) {
+                        maxId = num;
+                    }
+                }
+            }
+        });
+
         if (formData.requestType === 'project') {
             const projectId = `PROJ${Date.now()}`;
             const projectTasks: Task[] = subTasks.map(sub => {
                 maxId++;
-                const nextId = `PR${(maxId).toString().padStart(3, '0')}`;
+                const nextId = `PR${maxId.toString().padStart(3, '0')}/${currentYear}`;
+                
                 const taskData: Task = {
                     id: nextId, projectId, projectName,
                     taskTitle: sub.taskTitle, taskDescription: sub.taskDescription, taskType: sub.taskType, dueDate: sub.dueDate,
                     requestType: 'project', requesterName: formData.requesterName, department: formData.department, committee: formData.committee, requesterEmail: formData.requesterEmail, phone: formData.phone, additionalNotes: formData.additionalNotes,
-                    timestamp: new Date().toISOString(), attachments: fileData, assigneeId: null, status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],
+                    timestamp: new Date().toISOString(), attachments: fileData, assigneeIds: [], status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],
                 };
                 if (sub.taskType === OTHER_TASK_TYPE_NAME) taskData.otherTaskTypeName = sub.otherTaskTypeName;
                 return taskData;
@@ -273,10 +298,11 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             onTaskAdded(projectTasks);
         } else {
              maxId++;
-             const nextId = `PR${(maxId).toString().padStart(3, '0')}`;
+             const nextId = `PR${maxId.toString().padStart(3, '0')}/${currentYear}`;
+             
              const { position, ...restFormData } = formData;
              const newTask: Task = {
-              ...restFormData, id: nextId, timestamp: new Date().toISOString(), attachments: fileData, assigneeId: null, status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],
+              ...restFormData, id: nextId, timestamp: new Date().toISOString(), attachments: fileData, assigneeIds: [], status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],
             };
             if (newTask.taskType !== OTHER_TASK_TYPE_NAME) delete (newTask as Partial<Task>).otherTaskTypeName;
             onTaskAdded(newTask);
@@ -396,7 +422,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
 
         <div>
           <label className="form-label">10. กรุณาอัปโหลดข้อมูลประกอบการผลิต แก้ไข และขนาดชิ้นงานได้ที่นี่</label>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">• ขีดจำกัดจำนวนไฟล์: 10 • ขีดจำกัดขนาดไฟล์เดียว: 100MB • ชนิดไฟล์ที่ได้รับอนุญาต: Word, Excel, PPT, PDF, รูป, วิดีโอ, เสียง</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">• ขีดจำกัดจำนวนไฟล์: 10 • ขีดจำกัดขนาดไฟล์เดียว: 50MB • ชนิดไฟล์ที่ได้รับอนุญาต: Word, Excel, PPT, PDF, รูป, วิดีโอ, เสียง</p>
           <div onDragEnter={onDragEnter} onDragLeave={onDragLeave} onDragOver={onDragOver} onDrop={onDrop} className={`relative rounded-lg p-8 text-center transition-colors border-2 border-dashed ${isDragging ? 'bg-emerald-50 dark:bg-emerald-900/50 border-brand-secondary' : 'border-gray-300 dark:border-gray-600 hover:border-brand-secondary hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}>
             <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">ลากและวางไฟล์ที่นี่ หรือ <span className="font-semibold text-brand-secondary">คลิกเพื่อเลือกไฟล์</span></p>

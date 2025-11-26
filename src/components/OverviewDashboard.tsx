@@ -141,7 +141,8 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
   // งานที่เลยกำหนด (Past)
   const overdueTasks = tasks
     .filter(t => t.status !== TaskStatus.COMPLETED && t.status !== TaskStatus.CANCELLED && t.dueDate < localTodayStr)
-    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 5);
 
   const newestTasks = filteredTasks
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
@@ -433,7 +434,39 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         <StatCard icon={<FiXCircle size={24}/>} title="ยกเลิก" value={cancelledTasks} gradient="bg-gradient-to-br from-red-500 to-rose-600" onClick={() => onSetFilters({ status: TaskStatus.CANCELLED })} />
       </div>
 
-      {/* Overdue Tasks Section (New Full-Width Placement) */}
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
+          <h3 className="font-bold text-lg mb-4">สัดส่วนสถานะงาน</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label fill="#8884d8" labelLine={{ stroke: 'currentColor' }} className="text-gray-500 dark:text-dark-text-muted" onClick={handlePieClick}>
+                {statusData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} className="cursor-pointer focus:outline-none" />)}
+              </Pie>
+              <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" />
+              <Legend wrapperStyle={{cursor: 'pointer'}} onClick={(e) => onSetFilters({status: e.value})}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
+          <h3 className="font-bold text-lg mb-4">จำนวนงานแต่ละประเภท</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={taskTypeData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }} onClick={handleBarClick}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" className="dark:stroke-dark-border" />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:!fill-dark-text-muted" angle={-45} textAnchor="end" height={80} interval={0} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:!fill-dark-text-muted"/>
+              <Tooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }}/>
+              <Bar dataKey="count" name="จำนวนงาน" className="cursor-pointer">
+                {taskTypeData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Overdue Tasks Section (Moved Below Charts) */}
       <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow border-l-4 border-red-500">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-600 dark:text-red-400">
               <FiAlertCircle size={24} /> 🚨 งานที่เลยกำหนด (Overdue)
@@ -467,38 +500,6 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
                   <FiCheckCircle className="text-green-500"/> เยี่ยมมาก! ไม่มีงานที่เลยกำหนดส่ง
               </p>
           )}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
-          <h3 className="font-bold text-lg mb-4">สัดส่วนสถานะงาน</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label fill="#8884d8" labelLine={{ stroke: 'currentColor' }} className="text-gray-500 dark:text-dark-text-muted" onClick={handlePieClick}>
-                {statusData.map((entry) => <Cell key={`cell-${entry.name}`} fill={entry.color} className="cursor-pointer focus:outline-none" />)}
-              </Pie>
-              <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" />
-              <Legend wrapperStyle={{cursor: 'pointer'}} onClick={(e) => onSetFilters({status: e.value})}/>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="lg:col-span-2 bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow">
-          <h3 className="font-bold text-lg mb-4">จำนวนงานแต่ละประเภท</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={taskTypeData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }} onClick={handleBarClick}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.1)" className="dark:stroke-dark-border" />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#6b7280' }} className="dark:!fill-dark-text-muted" angle={-45} textAnchor="end" height={80} interval={0} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#6b7280' }} className="dark:!fill-dark-text-muted"/>
-              <Tooltip cursor={{fill: 'rgba(0,0,0,0.05)'}} wrapperClassName="dark:!bg-dark-card dark:!border-dark-border dark:!text-dark-text" contentStyle={{ backgroundColor: 'white', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }}/>
-              <Bar dataKey="count" name="จำนวนงาน" className="cursor-pointer">
-                {taskTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
       
       {/* Lists */}

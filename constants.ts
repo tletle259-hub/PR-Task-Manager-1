@@ -41,7 +41,7 @@ export const INITIAL_DEPARTMENTS: string[] = [
 // ข้อมูลงานจำลอง (Mock Data) สำหรับทดสอบระบบตอนเริ่มต้น
 export const MOCK_TASKS: Task[] = [
   {
-    id: 'PR001',
+    id: 'PR001/2025',
     timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายการตลาด',
     requesterEmail: 'marketing@example.com',
@@ -51,7 +51,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'แบนเนอร์',
     dueDate: '2025-11-20',
     attachments: [{ name: 'brief-12-12.pdf', size: 120450, type: 'application/pdf' }],
-    assigneeId: 'TM01',
+    assigneeIds: ['TM01'],
     status: TaskStatus.IN_PROGRESS,
     isStarred: true,
     notes: [{
@@ -67,7 +67,7 @@ export const MOCK_TASKS: Task[] = [
   },
   // ... (ข้อมูลจำลองอื่นๆ) ...
   {
-    id: 'PR002',
+    id: 'PR002/2025',
     timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายบุคคล',
     requesterEmail: 'hr@example.com',
@@ -77,7 +77,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'วิดีโอ (ถ่ายทำ)',
     dueDate: '2025-11-27',
     attachments: [],
-    assigneeId: 'TM02',
+    assigneeIds: ['TM02'],
     status: TaskStatus.IN_PROGRESS,
     isStarred: false,
     notes: [],
@@ -85,7 +85,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '082-345-6789',
   },
   {
-    id: 'PR003',
+    id: 'PR003/2025',
     timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายขาย',
     requesterEmail: 'sales@example.com',
@@ -95,7 +95,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'โบรชัวร์',
     dueDate: '2025-11-17',
     attachments: [{ name: 'product-details.docx', size: 2500000, type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }],
-    assigneeId: 'TM01',
+    assigneeIds: ['TM01'],
     status: TaskStatus.NOT_STARTED,
     isStarred: false,
     notes: [],
@@ -103,7 +103,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '083-456-7890',
   },
   {
-    id: 'PR004',
+    id: 'PR004/2025',
     timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายบริหาร',
     requesterEmail: 'management@example.com',
@@ -113,7 +113,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'ข่าวประชาสัมพันธ์',
     dueDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     attachments: [],
-    assigneeId: 'TM03',
+    assigneeIds: ['TM03'],
     status: TaskStatus.COMPLETED,
     isStarred: false,
     notes: [{
@@ -126,7 +126,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '084-567-8901',
   },
   {
-    id: 'PR005',
+    id: 'PR005/2025',
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายจัดซื้อ',
     requesterEmail: 'procurement@example.com',
@@ -136,7 +136,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'ของที่ระลึก',
     dueDate: '2025-12-04',
     attachments: [],
-    assigneeId: 'TM01',
+    assigneeIds: ['TM01'],
     status: TaskStatus.NOT_STARTED,
     isStarred: true,
     notes: [],
@@ -144,7 +144,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '085-678-9012',
   },
   {
-    id: 'PR006',
+    id: 'PR006/2025',
     timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายไอที',
     requesterEmail: 'it@example.com',
@@ -154,7 +154,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'สไลด์',
     dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     attachments: [],
-    assigneeId: 'TM04',
+    assigneeIds: ['TM04'],
     status: TaskStatus.COMPLETED,
     isStarred: false,
     notes: [],
@@ -162,7 +162,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '086-789-0123',
   },
   {
-    id: 'PR007',
+    id: 'PR007/2025',
     timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายการตลาด',
     requesterEmail: 'marketing@example.com',
@@ -172,7 +172,7 @@ export const MOCK_TASKS: Task[] = [
     taskType: 'Roll-up',
     dueDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     attachments: [],
-    assigneeId: 'TM02',
+    assigneeIds: ['TM02'],
     status: TaskStatus.CANCELLED,
     isStarred: false,
     notes: [{
@@ -181,6 +181,7 @@ export const MOCK_TASKS: Task[] = [
       timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
       text: 'ลูกค้ายกเลิกการออกบูธแล้ว งานนี้จึงถูกยกเลิก'
     }],
+    cancellationReason: 'ลูกค้ายกเลิกการออกบูธ และแจ้งยกเลิกงานกะทันหัน',
     requestType: 'new',
     phone: '081-234-5678'
   }
@@ -192,7 +193,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF001',
     type: NotificationType.NEW_ASSIGNMENT,
     message: 'คุณได้รับมอบหมายงานใหม่: "ออกแบบของที่ระลึกสำหรับแจกลูกค้า"',
-    taskId: 'PR005',
+    taskId: 'PR005/2025',
     timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
@@ -201,7 +202,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF002',
     type: NotificationType.DUE_SOON,
     message: 'งาน "ทำโบรชัวร์สินค้าใหม่" ใกล้จะถึงกำหนดส่งแล้ว',
-    taskId: 'PR003',
+    taskId: 'PR003/2025',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
@@ -209,7 +210,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF003',
     type: NotificationType.STATUS_UPDATE,
     message: 'สถานะของงาน "เขียนข่าวประชาสัมพันธ์เปิดตัว CEO คนใหม่" เปลี่ยนเป็น "เสร็จสิ้น"',
-    taskId: 'PR004',
+    taskId: 'PR004/2025',
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     isRead: true,
   },
@@ -217,7 +218,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF004',
     type: NotificationType.DUE_SOON,
     message: 'งาน "ออกแบบแบนเนอร์โปรโมชั่น 12.12" ใกล้ถึงกำหนดส่งแล้ว',
-    taskId: 'PR001',
+    taskId: 'PR001/2025',
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },

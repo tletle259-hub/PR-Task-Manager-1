@@ -1,3 +1,4 @@
+
 export enum TaskStatus {
   NOT_STARTED = 'ยังไม่ดำเนินการ',
   IN_PROGRESS = 'กำลังดำเนินการ',
@@ -52,10 +53,11 @@ export interface Task {
   taskType: string; // Changed from TaskType enum to string
   dueDate: string;
   attachments: Attachment[];
-  assigneeId: string | null;
+  assigneeIds: string[]; // Changed from assigneeId to assigneeIds array
   status: TaskStatus;
   isStarred: boolean;
   notes: Note[];
+  cancellationReason?: string; // New field for cancellation reason
 
   // New fields for the detailed form
   requestType: 'new' | 'edit' | 'other' | 'project';
