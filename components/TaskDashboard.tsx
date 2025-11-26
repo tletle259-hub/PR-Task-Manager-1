@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiClock } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask } from '../services/taskService';
@@ -297,12 +297,18 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
             whileHover={!isCompact ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            className="bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow"
+            className="bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow cursor-pointer"
             style={{ borderTop: `4px solid ${colorHex}` }}
+            onClick={() => onSelectTask(task)}
         >
             <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
-                    <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
+                            {task.status}
+                        </span>
+                    </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <span style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-3 py-1 text-xs font-semibold rounded-full`}>{taskTypeName}</span>
                     </div>
@@ -327,6 +333,10 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
             <div className={`mt-4 pt-4 border-t border-gray-100 dark:border-dark-border p-5 ${isCompact ? 'bg-white dark:bg-dark-card' : 'bg-gray-50 dark:bg-dark-card/50'}`}>
                 <div className="flex justify-between items-end text-sm">
                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                            <FiClock size={14} />
+                            <span>สั่งเมื่อ: {new Date(task.timestamp).toLocaleDateString('th-TH')}</span>
+                        </div>
                         <div className="flex items-center gap-2 text-red-500 font-medium">
                             <FiCalendar size={14} />
                             <span>กำหนดส่ง: {new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
@@ -348,14 +358,24 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
                     </div>
                 </div>
                 <div className="flex justify-between items-center mt-3">
-                    <button onClick={onToggleStar} aria-label={task.isStarred ? 'Remove from favorites' : 'Add to favorites'} className={`icon-interactive p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/50' : 'text-gray-400 dark:text-dark-text-muted hover:bg-gray-200 dark:hover:bg-dark-muted'}`}>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggleStar(); }} 
+                        aria-label={task.isStarred ? 'Remove from favorites' : 'Add to favorites'} 
+                        className={`icon-interactive p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/50' : 'text-gray-400 dark:text-dark-text-muted hover:bg-gray-200 dark:hover:bg-dark-muted'}`}
+                    >
                         <FiStar className={`${task.isStarred ? 'fill-current' : ''}`}/>
                     </button>
                     <div className="flex gap-2">
-                        <button onClick={() => onSelectTask(task)} className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onSelectTask(task); }} 
+                            className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                        >
                             <FiEdit3 size={14} /> แก้ไข
                         </button>
-                        <button onClick={onDelete} className="icon-interactive flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                            className="icon-interactive flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                        >
                             <FiTrash2 size={14}/> ลบ
                         </button>
                     </div>

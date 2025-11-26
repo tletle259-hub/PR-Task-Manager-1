@@ -466,7 +466,7 @@ const OverviewDashboard: React.FC<OverviewDashboardProps> = ({ tasks, teamMember
         </div>
       </div>
 
-      {/* Overdue Tasks Section (Moved Below Charts) */}
+      {/* Overdue Tasks Section (New Full-Width Placement - Below Charts) */}
       <div className="bg-white dark:bg-dark-card p-6 rounded-xl shadow-lg interactive-glow border-l-4 border-red-500">
           <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-red-600 dark:text-red-400">
               <FiAlertCircle size={24} /> 🚨 งานที่เลยกำหนด (Overdue)

@@ -251,8 +251,8 @@ const SidebarContent: React.FC<{ view: View; setView: (view: View) => void; onLo
                 active={view === 'tasks'} 
                 onMainClick={() => { onSetFilters({}); handleNavClick('tasks'); }}
               >
-                {Object.values(TaskStatus).map(status => (
-                  <NavSubItem key={status} label={status} onClick={() => handleFilterClick(status)} isActive={activeFilters.status === status} />
+                {(Object.values(TaskStatus) as string[]).map(status => (
+                  <NavSubItem key={status} label={status} onClick={() => handleFilterClick(status as TaskStatus)} isActive={activeFilters.status === status} />
                 ))}
               </NavDropdown>
 
