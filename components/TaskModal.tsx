@@ -45,6 +45,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
   // Initialize state with normalized data immediately to prevent render crashes
   const [editedTask, setEditedTask] = useState<Task>(() => {
       const initializedTask = { ...task };
+      // Ensure assigneeIds is an array
       if (!initializedTask.assigneeIds) {
           // @ts-ignore: handle legacy data
           if (initializedTask.assigneeId) {
@@ -53,8 +54,10 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
           } else {
              initializedTask.assigneeIds = [''];
           }
-      } else if (initializedTask.assigneeIds.length === 0) {
-          initializedTask.assigneeIds = ['']; // Default to one empty slot
+      } 
+      // Ensure there is at least one slot for the dropdown
+      if (initializedTask.assigneeIds.length === 0) {
+          initializedTask.assigneeIds = ['']; 
       }
       return initializedTask;
   });
@@ -205,10 +208,25 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
       if (newAssignees.length === 1) {
           // If it's the last one, just clear the value, don't remove the input
           newAssignees[0] = '';
+      } else if (index === 0) {
+          // If removing the main assignee row but there are others, shift or clear?
+          // Better to just clear it to allow changing "Main"
+          newAssignees[0] = ''; 
       } else {
           newAssignees.splice(index, 1);
       }
       setEditedTask(prev => ({ ...prev, assigneeIds: newAssignees }));
+  };
+
+  // Display Helper: Format ID with Slash
+  const getDisplayId = (task: Task) => {
+      if (task.id.includes('-')) {
+          return task.id.replace('-', '/');
+      }
+      // If it already has / or looks different, keep it. 
+      // Fallback for very old data: append year from timestamp? 
+      // No, let's stick to what's there unless it's the new hyphen format.
+      return task.id;
   };
   
   return (
@@ -239,7 +257,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                 </p>
             )}
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">{task.taskTitle}</h2>
-            <p className="text-sm font-semibold text-blue-500">{task.id}</p>
+            <p className="text-sm font-semibold text-blue-500">{getDisplayId(task)}</p>
           </div>
           <button onClick={onClose} aria-label="Close" className="icon-interactive p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ml-4">
             <FiX size={24} />
@@ -280,7 +298,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                                     <p className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2 truncate">
                                                         <FiLink size={12}/>
                                                         {pt.taskTitle} 
-                                                        <span className="font-normal text-xs text-gray-400">({pt.id})</span>
+                                                        <span className="font-normal text-xs text-gray-400">({getDisplayId(pt)})</span>
                                                     </p>
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-5">
                                                         <span>ประเภท: {taskTypeName}</span>
@@ -358,7 +376,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                         onChange={e => handleAssigneeChange(index, e.target.value)}
                                         className="w-full pl-10 p-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-brand-primary focus:outline-none text-sm appearance-none"
                                     >
-                                        <option value="">{index === 0 ? "ยังไม่มอบหมาย (เลือกผู้รับผิดชอบ)" : "เลือกผู้รับผิดชอบร่วม"}</option>
+                                        <option value="">{index === 0 ? "เลือกผู้รับผิดชอบ (หลัก)" : "เลือกผู้รับผิดชอบร่วม"}</option>
                                         {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name} ({m.position})</option>)}
                                     </select>
                                 </div>
@@ -366,9 +384,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                     <button 
                                         onClick={() => handleRemoveAssignee(index)} 
                                         className="p-2.5 text-gray-500 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-lg transition-colors flex-shrink-0 border border-transparent hover:border-red-200"
-                                        title={editedTask.assigneeIds.length === 1 ? "ล้างข้อมูล" : "ลบผู้รับผิดชอบนี้"}
+                                        title={index === 0 || editedTask.assigneeIds.length === 1 ? "ล้างข้อมูล" : "ลบผู้รับผิดชอบนี้"}
                                     >
-                                        {editedTask.assigneeIds.length === 1 ? <FiX size={18}/> : <FiTrash2 size={18}/>}
+                                        {(index === 0 || editedTask.assigneeIds.length === 1) ? <FiX size={18}/> : <FiTrash2 size={18}/>}
                                     </button>
                                 )}
                             </div>

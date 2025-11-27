@@ -64,3 +64,18 @@ export const deleteTask = async (taskId: string): Promise<void> => {
         throw e;
     }
 }
+
+// ลบหลายงานพร้อมกัน (Batch Delete)
+export const deleteTasks = async (taskIds: string[]): Promise<void> => {
+    try {
+        const batch = writeBatch(db);
+        taskIds.forEach(id => {
+            const taskDocRef = doc(db, TASKS_COLLECTION, id);
+            batch.delete(taskDocRef);
+        });
+        await batch.commit();
+    } catch (e) {
+        console.error("Error deleting tasks batch: ", e);
+        throw e;
+    }
+};

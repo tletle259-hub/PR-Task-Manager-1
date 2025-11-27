@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiClock } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiClock, FiCheckSquare, FiSquare, FiCheck } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
-import { updateTask, deleteTask } from '../services/taskService';
+import { updateTask, deleteTask, deleteTasks } from '../services/taskService';
 
 // --- NEW CONFIRMATION MODAL COMPONENT ---
 interface ConfirmationModalProps {
@@ -280,7 +280,18 @@ interface TaskDashboardProps {
   onSelectTask: (task: Task) => void;
 }
 
-const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; isCompact?: boolean; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isCompact = false }) => {
+const TaskCard: React.FC<{ 
+    task: Task; 
+    teamMembers: TeamMember[]; 
+    taskTypeConfigs: TaskTypeConfig[]; 
+    onSelectTask: (task: Task) => void; 
+    onToggleStar: () => void; 
+    onDelete: () => void; 
+    isCompact?: boolean; 
+    isSelectionMode: boolean;
+    isSelected: boolean;
+    onToggleSelect: () => void;
+}> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isCompact = false, isSelectionMode, isSelected, onToggleSelect }) => {
     // Handle multiple assignees safely
     const assigneeIds = task.assigneeIds || [];
     const assignees = teamMembers.filter(m => assigneeIds.includes(m.id));
@@ -288,6 +299,14 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
     const config = taskTypeConfigs.find(c => c.name === task.taskType);
     const colorHex = config?.colorHex || '#64748b'; // Default slate color
     const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (isSelectionMode) {
+            onToggleSelect();
+        } else {
+            onSelectTask(task);
+        }
+    };
 
     return (
         <motion.div
@@ -297,21 +316,31 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
             whileHover={!isCompact ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            className="bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow cursor-pointer"
+            className={`bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow cursor-pointer relative ${isSelected ? 'ring-2 ring-brand-primary dark:ring-dark-accent transform scale-[1.02]' : ''}`}
             style={{ borderTop: `4px solid ${colorHex}` }}
-            onClick={() => onSelectTask(task)}
+            onClick={handleClick}
         >
+            {isSelectionMode && (
+                <div className="absolute top-3 right-3 z-10">
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-brand-primary border-brand-primary' : 'bg-white dark:bg-dark-card border-gray-300 dark:border-gray-600'}`}>
+                        {isSelected && <FiCheck size={16} className="text-white" />}
+                    </div>
+                </div>
+            )}
+
             <div className="p-5">
                 <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id}</span>
+                        <span className="font-bold text-gray-400 dark:text-dark-text-muted text-sm pt-1">{task.id.replace('-', '/')}</span>
                         <span className={`px-2 py-0.5 text-[10px] font-bold text-white rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
                             {task.status}
                         </span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <span style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-3 py-1 text-xs font-semibold rounded-full`}>{taskTypeName}</span>
-                    </div>
+                    {!isSelectionMode && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            <span style={{ backgroundColor: colorHex + '20', color: colorHex }} className={`px-3 py-1 text-xs font-semibold rounded-full`}>{taskTypeName}</span>
+                        </div>
+                    )}
                 </div>
                 
                  {task.projectName && (
@@ -357,35 +386,47 @@ const TaskCard: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfig
                         )}
                     </div>
                 </div>
-                <div className="flex justify-between items-center mt-3">
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onToggleStar(); }} 
-                        aria-label={task.isStarred ? 'Remove from favorites' : 'Add to favorites'} 
-                        className={`icon-interactive p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/50' : 'text-gray-400 dark:text-dark-text-muted hover:bg-gray-200 dark:hover:bg-dark-muted'}`}
-                    >
-                        <FiStar className={`${task.isStarred ? 'fill-current' : ''}`}/>
-                    </button>
-                    <div className="flex gap-2">
+                {!isSelectionMode && (
+                    <div className="flex justify-between items-center mt-3">
                         <button 
-                            onClick={(e) => { e.stopPropagation(); onSelectTask(task); }} 
-                            className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); onToggleStar(); }} 
+                            aria-label={task.isStarred ? 'Remove from favorites' : 'Add to favorites'} 
+                            className={`icon-interactive p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/50' : 'text-gray-400 dark:text-dark-text-muted hover:bg-gray-200 dark:hover:bg-dark-muted'}`}
                         >
-                            <FiEdit3 size={14} /> แก้ไข
+                            <FiStar className={`${task.isStarred ? 'fill-current' : ''}`}/>
                         </button>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onDelete(); }} 
-                            className="icon-interactive flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                        >
-                            <FiTrash2 size={14}/> ลบ
-                        </button>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onSelectTask(task); }} 
+                                className="icon-interactive flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-md text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                            >
+                                <FiEdit3 size={14} /> แก้ไข
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                                className="icon-interactive flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300 rounded-md text-sm hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                            >
+                                <FiTrash2 size={14}/> ลบ
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </motion.div>
     );
 };
 
-const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeConfigs: TaskTypeConfig[]; onSelectTask: (task: Task) => void; onToggleStar: () => void; onDelete: () => void; }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete }) => {
+const TaskListItem: React.FC<{ 
+    task: Task; 
+    teamMembers: TeamMember[]; 
+    taskTypeConfigs: TaskTypeConfig[]; 
+    onSelectTask: (task: Task) => void; 
+    onToggleStar: () => void; 
+    onDelete: () => void;
+    isSelectionMode: boolean;
+    isSelected: boolean;
+    onToggleSelect: () => void;
+}> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isSelectionMode, isSelected, onToggleSelect }) => {
     const assigneeIds = task.assigneeIds || [];
     const assignees = teamMembers.filter(m => assigneeIds.includes(m.id));
     
@@ -393,20 +434,36 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeCo
     const colorHex = config?.colorHex || '#64748b';
     const taskTypeName = task.taskType === "งานชนิดอื่นๆ" ? task.otherTaskTypeName : task.taskType;
 
+    const handleClick = () => {
+        if (isSelectionMode) {
+            onToggleSelect();
+        } else {
+            onSelectTask(task);
+        }
+    };
+
     return (
          <motion.div
             layout="position"
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 50 }}
-            className="bg-white dark:bg-dark-card rounded-lg shadow p-3 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4"
+            onClick={handleClick}
+            className={`bg-white dark:bg-dark-card rounded-lg shadow p-3 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 cursor-pointer ${isSelected ? 'ring-2 ring-brand-primary dark:ring-dark-accent bg-blue-50 dark:bg-blue-900/20' : ''}`}
         >
             <div className="flex items-center gap-3 flex-grow min-w-0 w-full lg:w-auto">
-                 <button onClick={onToggleStar} aria-label="Toggle star" className={`icon-interactive flex-shrink-0 p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500' : 'text-gray-400 dark:text-dark-text-muted hover:text-yellow-500'}`}>
-                    <FiStar size={20} className={`${task.isStarred ? 'fill-current' : ''}`}/>
-                </button>
+                 {isSelectionMode ? (
+                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-brand-primary border-brand-primary' : 'bg-white dark:bg-dark-card border-gray-300 dark:border-gray-600'}`}>
+                        {isSelected && <FiCheck size={14} className="text-white" />}
+                    </div>
+                 ) : (
+                    <button onClick={(e) => { e.stopPropagation(); onToggleStar(); }} aria-label="Toggle star" className={`icon-interactive flex-shrink-0 p-2 rounded-full transition-colors ${task.isStarred ? 'text-yellow-500' : 'text-gray-400 dark:text-dark-text-muted hover:text-yellow-500'}`}>
+                        <FiStar size={20} className={`${task.isStarred ? 'fill-current' : ''}`}/>
+                    </button>
+                 )}
+                 
                  <div className="min-w-0 flex-grow">
-                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">{task.id}</p>
+                    <p className="text-xs text-gray-500 dark:text-dark-text-muted">{task.id.replace('-', '/')}</p>
                     <p className="font-bold truncate text-gray-800 dark:text-dark-text">{task.taskTitle}</p>
                     {task.projectName && (
                         <div className="mt-1">
@@ -442,10 +499,12 @@ const TaskListItem: React.FC<{ task: Task; teamMembers: TeamMember[]; taskTypeCo
                     <span>{new Date(task.dueDate).toLocaleDateString('th-TH')}</span>
                 </div>
 
-                <div className="flex gap-1 ml-auto">
-                    <button onClick={() => onSelectTask(task)} className="icon-interactive p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit3 /></button>
-                    <button onClick={onDelete} className="icon-interactive p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
-                </div>
+                {!isSelectionMode && (
+                    <div className="flex gap-1 ml-auto">
+                        <button onClick={(e) => { e.stopPropagation(); onSelectTask(task); }} className="icon-interactive p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full"><FiEdit3 /></button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="icon-interactive p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-full"><FiTrash2 /></button>
+                    </div>
+                )}
             </div>
          </motion.div>
     );
@@ -459,6 +518,11 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
+  
+  // Selection States
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (initialFilters && Object.keys(initialFilters).length > 0) {
@@ -518,7 +582,6 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
       filtered = filtered.filter(t => t.taskType === filters.type);
     }
     if (filters.assignee !== 'all') {
-      // Check if the selected assignee is in the list of assignees for the task
       filtered = filtered.filter(t => (t.assigneeIds || []).includes(filters.assignee));
     }
      if (filters.department !== 'all') {
@@ -577,6 +640,38 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
     }
   };
 
+  // --- Selection Logic ---
+  const toggleSelectionMode = () => {
+      setIsSelectionMode(!isSelectionMode);
+      setSelectedTaskIds(new Set());
+  };
+
+  const toggleSelectTask = (taskId: string) => {
+      const newSelected = new Set(selectedTaskIds);
+      if (newSelected.has(taskId)) {
+          newSelected.delete(taskId);
+      } else {
+          newSelected.add(taskId);
+      }
+      setSelectedTaskIds(newSelected);
+  };
+
+  const handleSelectAll = () => {
+      if (selectedTaskIds.size === filteredAndSortedTasks.length) {
+          setSelectedTaskIds(new Set());
+      } else {
+          const allIds = filteredAndSortedTasks.map(t => t.id);
+          setSelectedTaskIds(new Set(allIds));
+      }
+  };
+
+  const handleBulkDelete = async () => {
+      await deleteTasks(Array.from(selectedTaskIds));
+      setShowBulkDeleteConfirm(false);
+      setIsSelectionMode(false);
+      setSelectedTaskIds(new Set());
+  };
+
   const getStatusPillColor = (status: string) => {
     switch (status) {
         case TaskStatus.NOT_STARTED: return 'bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-gray-200';
@@ -625,6 +720,9 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
                             onSelectTask={onSelectTask}
                             onToggleStar={() => handleToggleStar(task.id)}
                             onDelete={() => setTaskToDelete(task)}
+                            isSelectionMode={isSelectionMode}
+                            isSelected={selectedTaskIds.has(task.id)}
+                            onToggleSelect={() => toggleSelectTask(task.id)}
                         />
                     ))}
                   </div>
@@ -644,6 +742,9 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
                           onSelectTask={onSelectTask}
                           onToggleStar={() => handleToggleStar(task.id)}
                           onDelete={() => setTaskToDelete(task)}
+                          isSelectionMode={isSelectionMode}
+                          isSelected={selectedTaskIds.has(task.id)}
+                          onToggleSelect={() => toggleSelectTask(task.id)}
                         />
                       ))}
                     </AnimatePresence>
@@ -674,7 +775,42 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
             <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-text-muted" />
             <input type="text" placeholder="ค้นหา ID, ชื่องาน, ผู้ขอ, ชื่อโปรเจกต์..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full p-3 pl-12 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-dark-bg focus:ring-2 focus:ring-brand-primary dark:focus:ring-dark-accent focus:outline-none" />
           </div>
-           <div className="flex items-center gap-2 flex-shrink-0">
+           <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                {/* Bulk Selection Controls */}
+                {isSelectionMode ? (
+                    <div className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 p-1 rounded-lg border border-blue-100 dark:border-blue-800 mr-2">
+                        <button 
+                            onClick={handleSelectAll} 
+                            className="px-3 py-1.5 text-sm font-medium rounded-md bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-muted text-brand-primary dark:text-blue-400 shadow-sm flex items-center gap-2"
+                        >
+                            <FiCheckSquare /> เลือกทั้งหมด
+                        </button>
+                        <span className="text-sm font-bold text-brand-primary px-2">{selectedTaskIds.size} รายการ</span>
+                        {selectedTaskIds.size > 0 && (
+                            <button 
+                                onClick={() => setShowBulkDeleteConfirm(true)} 
+                                className="px-3 py-1.5 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700 shadow-sm flex items-center gap-1"
+                            >
+                                <FiTrash2 /> ลบ
+                            </button>
+                        )}
+                        <button 
+                            onClick={toggleSelectionMode} 
+                            className="px-2 py-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                            title="ยกเลิก"
+                        >
+                            <FiX />
+                        </button>
+                    </div>
+                ) : (
+                    <button 
+                        onClick={toggleSelectionMode} 
+                        className="icon-interactive flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border"
+                    >
+                        <FiCheckSquare /> เลือกหลายรายการ
+                    </button>
+                )}
+
                 <div className="p-1 bg-gray-200 dark:bg-dark-bg rounded-lg flex items-center">
                     {(['card', 'list'] as ViewMode[]).map(mode => (
                         <button key={mode} onClick={() => setViewMode(mode)} className={`p-2 rounded-md transition-colors ${viewMode === mode ? 'bg-white dark:bg-dark-muted shadow' : 'text-gray-500 dark:text-dark-text-muted hover:bg-white/50 dark:hover:bg-dark-muted/50'}`}>
@@ -823,6 +959,22 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
             confirmText="ลบ"
             cancelText="ยกเลิก"
           />
+        )}
+        {showBulkDeleteConfirm && (
+            <ConfirmationModal
+                onClose={() => setShowBulkDeleteConfirm(false)}
+                onConfirm={handleBulkDelete}
+                title="ยืนยันการลบหลายรายการ"
+                message={
+                    <>
+                        คุณแน่ใจหรือไม่ว่าต้องการลบงานที่เลือกจำนวน <strong className="text-red-600">{selectedTaskIds.size}</strong> รายการ?
+                        <br/>
+                        การกระทำนี้ไม่สามารถย้อนกลับได้
+                    </>
+                }
+                confirmText="ลบทั้งหมด"
+                cancelText="ยกเลิก"
+            />
         )}
       </AnimatePresence>
     </div>

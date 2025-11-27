@@ -255,39 +255,43 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
         const fileData = await Promise.all(attachmentPromises);
         
         // --- ID GENERATION LOGIC ---
-        // 1. หาปีปัจจุบัน
         const currentYear = new Date().getFullYear();
-        
-        // 2. หาเลข ID สูงสุดของปีนี้ โดยดูจากรูปแบบ PRxxx/YYYY
         let maxId = 0;
         
+        // Matches "PR" followed by digits, then "-" or "/", then 4-digit year. 
+        // Supports parsing both PR001-2025 and legacy PR001/2025 formats to find max sequence.
+        const idPattern = /^PR(\d+)[\/-](\d{4})$/i;
+
         tasks.forEach(t => {
-            // แยก string ด้วย '/' เช่น "PR001/2025" -> ["PR001", "2025"]
-            const parts = t.id.split('/');
-            
-            if (parts.length === 2) {
-                // ตรวจสอบว่าเป็นปีปัจจุบันหรือไม่
-                const idYear = parseInt(parts[1], 10);
-                if (idYear === currentYear) {
-                    // ดึงตัวเลขออกจากส่วนหน้า (PRxxx)
-                    const numberPart = parts[0].replace('PR', '');
-                    const num = parseInt(numberPart, 10);
-                    
-                    if (!isNaN(num) && num > maxId) {
-                        maxId = num;
+            const match = t.id.match(idPattern);
+            if (match) {
+                const sequenceNum = parseInt(match[1], 10);
+                const year = parseInt(match[2], 10);
+                
+                // Only consider tasks from the current year for the running number
+                if (year === currentYear) {
+                    if (sequenceNum > maxId) {
+                        maxId = sequenceNum;
                     }
                 }
             }
         });
 
+        // Generate next ID. Resets to PR001-YYYY if no tasks found for current year.
+        maxId++;
+        // padStart(3, '0') handles "001", "099", "100", "1000" correctly (doesn't truncate if > 3)
+        // Using '-' separator to ensure Firestore Document Reference validity.
+        const nextId = `PR${maxId.toString().padStart(3, '0')}-${currentYear}`;
+
         if (formData.requestType === 'project') {
             const projectId = `PROJ${Date.now()}`;
-            const projectTasks: Task[] = subTasks.map(sub => {
-                maxId++;
-                const nextId = `PR${maxId.toString().padStart(3, '0')}/${currentYear}`;
+            // For project tasks, we generate sequential IDs starting from nextId
+            const projectTasks: Task[] = subTasks.map((sub, index) => {
+                const currentSeq = maxId + index;
+                const taskId = `PR${currentSeq.toString().padStart(3, '0')}-${currentYear}`;
                 
                 const taskData: Task = {
-                    id: nextId, projectId, projectName,
+                    id: taskId, projectId, projectName,
                     taskTitle: sub.taskTitle, taskDescription: sub.taskDescription, taskType: sub.taskType, dueDate: sub.dueDate,
                     requestType: 'project', requesterName: formData.requesterName, department: formData.department, committee: formData.committee, requesterEmail: formData.requesterEmail, phone: formData.phone, additionalNotes: formData.additionalNotes,
                     timestamp: new Date().toISOString(), attachments: fileData, assigneeIds: [], status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],
@@ -297,9 +301,6 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             });
             onTaskAdded(projectTasks);
         } else {
-             maxId++;
-             const nextId = `PR${maxId.toString().padStart(3, '0')}/${currentYear}`;
-             
              const { position, ...restFormData } = formData;
              const newTask: Task = {
               ...restFormData, id: nextId, timestamp: new Date().toISOString(), attachments: fileData, assigneeIds: [], status: TaskStatus.NOT_STARTED, isStarred: false, notes: [],

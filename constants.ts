@@ -39,9 +39,10 @@ export const INITIAL_DEPARTMENTS: string[] = [
 ];
 
 // ข้อมูลงานจำลอง (Mock Data) สำหรับทดสอบระบบตอนเริ่มต้น
+// Note: Changed IDs from PRxxx/YYYY to PRxxx-YYYY to avoid Firestore Invalid Document Reference errors
 export const MOCK_TASKS: Task[] = [
   {
-    id: 'PR001/2025',
+    id: 'PR001-2025',
     timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายการตลาด',
     requesterEmail: 'marketing@example.com',
@@ -67,7 +68,7 @@ export const MOCK_TASKS: Task[] = [
   },
   // ... (ข้อมูลจำลองอื่นๆ) ...
   {
-    id: 'PR002/2025',
+    id: 'PR002-2025',
     timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายบุคคล',
     requesterEmail: 'hr@example.com',
@@ -85,7 +86,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '082-345-6789',
   },
   {
-    id: 'PR003/2025',
+    id: 'PR003-2025',
     timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายขาย',
     requesterEmail: 'sales@example.com',
@@ -103,7 +104,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '083-456-7890',
   },
   {
-    id: 'PR004/2025',
+    id: 'PR004-2025',
     timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายบริหาร',
     requesterEmail: 'management@example.com',
@@ -126,7 +127,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '084-567-8901',
   },
   {
-    id: 'PR005/2025',
+    id: 'PR005-2025',
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายจัดซื้อ',
     requesterEmail: 'procurement@example.com',
@@ -144,7 +145,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '085-678-9012',
   },
   {
-    id: 'PR006/2025',
+    id: 'PR006-2025',
     timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายไอที',
     requesterEmail: 'it@example.com',
@@ -162,7 +163,7 @@ export const MOCK_TASKS: Task[] = [
     phone: '086-789-0123',
   },
   {
-    id: 'PR007/2025',
+    id: 'PR007-2025',
     timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     requesterName: 'ฝ่ายการตลาด',
     requesterEmail: 'marketing@example.com',
@@ -193,7 +194,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF001',
     type: NotificationType.NEW_ASSIGNMENT,
     message: 'คุณได้รับมอบหมายงานใหม่: "ออกแบบของที่ระลึกสำหรับแจกลูกค้า"',
-    taskId: 'PR005/2025',
+    taskId: 'PR005-2025',
     timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
@@ -202,7 +203,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF002',
     type: NotificationType.DUE_SOON,
     message: 'งาน "ทำโบรชัวร์สินค้าใหม่" ใกล้จะถึงกำหนดส่งแล้ว',
-    taskId: 'PR003/2025',
+    taskId: 'PR003-2025',
     timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
@@ -210,7 +211,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF003',
     type: NotificationType.STATUS_UPDATE,
     message: 'สถานะของงาน "เขียนข่าวประชาสัมพันธ์เปิดตัว CEO คนใหม่" เปลี่ยนเป็น "เสร็จสิ้น"',
-    taskId: 'PR004/2025',
+    taskId: 'PR004-2025',
     timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
     isRead: true,
   },
@@ -218,7 +219,7 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     id: 'NOTIF004',
     type: NotificationType.DUE_SOON,
     message: 'งาน "ออกแบบแบนเนอร์โปรโมชั่น 12.12" ใกล้ถึงกำหนดส่งแล้ว',
-    taskId: 'PR001/2025',
+    taskId: 'PR001-2025',
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     isRead: false,
   },
