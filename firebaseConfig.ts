@@ -1,7 +1,7 @@
 
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
+import 'firebase/compat/auth';
 
 // --- FIREBASE CONFIGURATION ---
 // ค่าตั้งค่าสำหรับการเชื่อมต่อกับโปรเจกต์ Firebase
@@ -15,9 +15,10 @@ const firebaseConfig = {
   measurementId: "G-TRFHW3C1DR"                      // ID สำหรับ Analytics
 };
 
-// เริ่มต้นการทำงานของ Firebase App
-const app = initializeApp(firebaseConfig);
+// เริ่มต้นการทำงานของ Firebase App (Compat)
+// Check if apps are already initialized to prevent errors in hot-reload
+const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
 
 // Export ตัวจัดการ Database (Firestore) และระบบยืนยันตัวตน (Auth) ไปใช้ในไฟล์อื่น
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+export const db = firebase.firestore();
+export const auth = firebase.auth();

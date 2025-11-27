@@ -1,23 +1,22 @@
 
-import { collection, onSnapshot, getDocs, writeBatch, doc, addDoc, updateDoc, deleteDoc, query, orderBy, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Department, TaskTypeConfig } from '../types';
 import { INITIAL_DEPARTMENTS, TASK_TYPE_COLORS } from '../constants';
 import { TaskType as OldTaskTypeEnum } from '../types'; 
+import firebase from 'firebase/compat/app';
 
 // --- DEPARTMENT SERVICE (บริการจัดการส่วนงาน/แผนก) ---
 
 const DEPARTMENTS_COLLECTION = 'departments';
-const departmentsCollectionRef = collection(db, DEPARTMENTS_COLLECTION);
 
 // สร้างข้อมูลแผนกเริ่มต้น
 export const seedInitialDepartments = async () => {
-    const snapshot = await getDocs(departmentsCollectionRef);
+    const snapshot = await db.collection(DEPARTMENTS_COLLECTION).get();
     if (snapshot.empty) {
         console.log("Seeding initial departments...");
-        const batch = writeBatch(db);
+        const batch = db.batch();
         INITIAL_DEPARTMENTS.forEach(name => {
-            const docRef = doc(collection(db, DEPARTMENTS_COLLECTION));
+            const docRef = db.collection(DEPARTMENTS_COLLECTION).doc();
             batch.set(docRef, { name });
         });
         await batch.commit();
@@ -26,8 +25,8 @@ export const seedInitialDepartments = async () => {
 
 // ติดตามรายการแผนก (เรียงตามชื่อ)
 export const onDepartmentsUpdate = (callback: (departments: Department[]) => void): (() => void) => {
-    const q = query(departmentsCollectionRef, orderBy('name'));
-    return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+    const q = db.collection(DEPARTMENTS_COLLECTION).orderBy('name');
+    return q.onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
         const departments: Department[] = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name } as Department));
         callback(departments);
     });
@@ -35,26 +34,23 @@ export const onDepartmentsUpdate = (callback: (departments: Department[]) => voi
 
 // เพิ่มแผนก
 export const addDepartment = async (name: string): Promise<void> => {
-    await addDoc(departmentsCollectionRef, { name });
+    await db.collection(DEPARTMENTS_COLLECTION).add({ name });
 };
 
 // แก้ไขชื่อแผนก
 export const updateDepartment = async (id: string, name: string): Promise<void> => {
-    const docRef = doc(db, DEPARTMENTS_COLLECTION, id);
-    await updateDoc(docRef, { name });
+    await db.collection(DEPARTMENTS_COLLECTION).doc(id).update({ name });
 };
 
 // ลบแผนก
 export const deleteDepartment = async (id: string): Promise<void> => {
-    const docRef = doc(db, DEPARTMENTS_COLLECTION, id);
-    await deleteDoc(docRef);
+    await db.collection(DEPARTMENTS_COLLECTION).doc(id).delete();
 };
 
 
 // --- TASK TYPE CONFIG SERVICE (บริการตั้งค่าประเภทงาน) ---
 
 const CONFIGS_COLLECTION = 'taskTypeConfigs';
-const configsCollectionRef = collection(db, CONFIGS_COLLECTION);
 
 const getRandomColor = () => {
     const palette = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899'];
@@ -63,14 +59,14 @@ const getRandomColor = () => {
 
 // สร้างข้อมูลประเภทงานเริ่มต้น (จาก Enum เดิม)
 export const seedInitialTaskTypeConfigs = async () => {
-    const snapshot = await getDocs(configsCollectionRef);
+    const snapshot = await db.collection(CONFIGS_COLLECTION).get();
     if (snapshot.empty) {
         console.log("Seeding initial task type configs from enum...");
-        const batch = writeBatch(db);
+        const batch = db.batch();
         let order = 0;
         for (const typeName of Object.values(OldTaskTypeEnum)) {
             const isOther = typeName === OldTaskTypeEnum.OTHER;
-            const docRef = doc(collection(db, CONFIGS_COLLECTION));
+            const docRef = db.collection(CONFIGS_COLLECTION).doc();
             const configData: Omit<TaskTypeConfig, 'id'> = {
                 name: typeName,
                 dailyLimit: null,
@@ -88,8 +84,7 @@ export const seedInitialTaskTypeConfigs = async () => {
 // ติดตามการตั้งค่าประเภทงาน
 export const onTaskTypeConfigsUpdate = (callback: (configs: TaskTypeConfig[]) => void): (() => void) => {
     // ดึงข้อมูลมาแล้วเรียงลำดับที่ฝั่ง Client (เพื่อลดปัญหา Index ของ Firestore)
-    const q = query(configsCollectionRef);
-    return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+    return db.collection(CONFIGS_COLLECTION).onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
         const configs: TaskTypeConfig[] = snapshot.docs.map(doc => ({ 
             id: doc.id, 
             ...doc.data() 
@@ -109,11 +104,11 @@ export const onTaskTypeConfigsUpdate = (callback: (configs: TaskTypeConfig[]) =>
 
 // เพิ่มประเภทงานใหม่
 export const addTaskTypeConfig = async (configData: {name: string, dailyLimit: number | null, leadTimeDays: number | null}): Promise<void> => {
-    const snapshot = await getDocs(configsCollectionRef);
+    const snapshot = await db.collection(CONFIGS_COLLECTION).get();
     // หา Order สูงสุดเพื่อต่อท้าย
     const maxOrder = Math.max(0, ...snapshot.docs.map(doc => doc.data().order || 0).filter(o => o < 999));
 
-    await addDoc(configsCollectionRef, { 
+    await db.collection(CONFIGS_COLLECTION).add({ 
         name: configData.name,
         dailyLimit: configData.dailyLimit,
         leadTimeDays: configData.leadTimeDays,
@@ -125,12 +120,10 @@ export const addTaskTypeConfig = async (configData: {name: string, dailyLimit: n
 
 // แก้ไขประเภทงาน
 export const updateTaskTypeConfig = async (id: string, updates: Partial<Omit<TaskTypeConfig, 'id'>>): Promise<void> => {
-    const docRef = doc(db, CONFIGS_COLLECTION, id);
-    await updateDoc(docRef, updates);
+    await db.collection(CONFIGS_COLLECTION).doc(id).update(updates);
 };
 
 // ลบประเภทงาน
 export const deleteTaskTypeConfig = async (id: string): Promise<void> => {
-    const docRef = doc(db, CONFIGS_COLLECTION, id);
-    await deleteDoc(docRef);
+    await db.collection(CONFIGS_COLLECTION).doc(id).delete();
 };

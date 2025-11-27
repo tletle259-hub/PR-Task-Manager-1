@@ -1,23 +1,21 @@
 
-import { collection, addDoc, query, where, getDocs, doc, getDoc, updateDoc, onSnapshot, deleteDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { User } from '../types';
+import firebase from 'firebase/compat/app';
 
 // --- USER SERVICE (บริการจัดการผู้สั่งงานทั่วไป) ---
 
 const USERS_COLLECTION = 'users';
-const usersCollectionRef = collection(db, USERS_COLLECTION);
 
 // สร้าง User ใหม่
 export const createUser = async (userData: Omit<User, 'id'>): Promise<string> => {
-    const docRef = await addDoc(usersCollectionRef, userData);
+    const docRef = await db.collection(USERS_COLLECTION).add(userData);
     return docRef.id;
 };
 
 // ค้นหา User จาก Username
 export const getUserByUsername = async (username: string): Promise<User | null> => {
-    const q = query(usersCollectionRef, where("username", "==", username));
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await db.collection(USERS_COLLECTION).where("username", "==", username).get();
     if (querySnapshot.empty) {
         return null;
     }
@@ -27,8 +25,7 @@ export const getUserByUsername = async (username: string): Promise<User | null> 
 
 // ค้นหา User จาก Microsoft Account ID
 export const getUserByMsalAccountId = async (accountId: string): Promise<User | null> => {
-    const q = query(usersCollectionRef, where("msalAccountId", "==", accountId));
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await db.collection(USERS_COLLECTION).where("msalAccountId", "==", accountId).get();
     if (querySnapshot.empty) {
         return null;
     }
@@ -38,11 +35,11 @@ export const getUserByMsalAccountId = async (accountId: string): Promise<User | 
 
 // ตรวจสอบว่า Username หรือ Email ซ้ำหรือไม่
 export const checkUserExists = async (username: string, email: string): Promise<{ username: boolean; email: boolean }> => {
-    const usernameQuery = query(usersCollectionRef, where("username", "==", username));
-    const emailQuery = query(usersCollectionRef, where("email", "==", email));
+    const usernameQuery = db.collection(USERS_COLLECTION).where("username", "==", username);
+    const emailQuery = db.collection(USERS_COLLECTION).where("email", "==", email);
 
-    const usernameSnapshot = await getDocs(usernameQuery);
-    const emailSnapshot = await getDocs(emailQuery);
+    const usernameSnapshot = await usernameQuery.get();
+    const emailSnapshot = await emailQuery.get();
 
     return {
         username: !usernameSnapshot.empty,
@@ -52,13 +49,12 @@ export const checkUserExists = async (username: string, email: string): Promise<
 
 // อัปเดตข้อมูล User
 export const updateUser = async (userId: string, userData: Partial<User>): Promise<void> => {
-    const userDocRef = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDocRef, userData);
+    await db.collection(USERS_COLLECTION).doc(userId).update(userData);
 };
 
 // ติดตามรายชื่อ User ทั้งหมด (สำหรับ Admin จัดการ)
 export const onUsersUpdate = (callback: (users: User[]) => void): (() => void) => {
-    return onSnapshot(usersCollectionRef, (snapshot: QuerySnapshot<DocumentData>) => {
+    return db.collection(USERS_COLLECTION).onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
         const users: User[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
         callback(users);
     }, (error) => {
@@ -68,6 +64,5 @@ export const onUsersUpdate = (callback: (users: User[]) => void): (() => void) =
 
 // ลบ User
 export const deleteUser = async (userId: string): Promise<void> => {
-    const userDocRef = doc(db, USERS_COLLECTION, userId);
-    await deleteDoc(userDocRef);
+    await db.collection(USERS_COLLECTION).doc(userId).delete();
 };

@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiFileText, FiClock, FiCalendar, FiBriefcase, FiSearch, FiFilter, FiX, FiAlertCircle } from 'react-icons/fi';

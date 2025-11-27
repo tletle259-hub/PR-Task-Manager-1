@@ -1,7 +1,5 @@
 
 import { PublicClientApplication, EventType, AccountInfo } from "@azure/msal-browser";
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { signOut } from 'firebase/auth';
 import { db, auth } from '../firebaseConfig';
 import { TeamMember, User } from '../types';
 import { createUser, getUserByUsername, checkUserExists } from './userService';
@@ -38,7 +36,13 @@ msalInstance.addEventCallback((event: any) => {
 
 // --- Helper: Ensure Firebase Auth ---
 export const ensureFirebaseAuth = async () => {
-    await auth.authStateReady();
+    // v8 compat way
+    return new Promise<void>((resolve) => {
+        const unsubscribe = auth.onAuthStateChanged(() => {
+            unsubscribe();
+            resolve();
+        });
+    });
 };
 
 // --- MSAL Functions ---
@@ -93,7 +97,7 @@ export const loginWithUsernamePassword = async (username: string, password: stri
         // Auto-fix: If permission denied, sign out (clear stale token) and retry once
         if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
             console.warn("Permission error detected. Clearing auth state and retrying...");
-            await signOut(auth);
+            await auth.signOut();
             // Retry the operation
             const userRetry = await getUserByUsername(username);
             if (userRetry && userRetry.password === password) {
@@ -109,21 +113,21 @@ export const loginWithUsernamePassword = async (username: string, password: stri
 
 // --- Custom Team Member Auth Functions ---
 export const loginWithSecureId = async (username: string, password: string): Promise<TeamMember | null> => {
-    const usersRef = collection(db, 'secureID');
-    const q = query(usersRef, where("id", "==", username));
+    const usersRef = db.collection('secureID');
+    const q = usersRef.where("id", "==", username);
     
     let querySnapshot;
 
     try {
-        querySnapshot = await getDocs(q);
+        querySnapshot = await q.get();
     } catch (error: any) {
         // Critical Fix: If permission denied, it might be due to a stale anonymous token.
         // We sign out to force "Guest" mode which works with "allow read: if true;"
         if (error.code === 'permission-denied' || error.message?.includes('Missing or insufficient permissions')) {
              console.warn("Permission denied. Clearing potential stale auth token and retrying...");
              try {
-                 await signOut(auth);
-                 querySnapshot = await getDocs(q);
+                 await auth.signOut();
+                 querySnapshot = await q.get();
              } catch (retryError) {
                  // If it fails again, bubble up the error to show the Rules instruction
                  throw error; 

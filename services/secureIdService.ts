@@ -1,34 +1,38 @@
 
-import { collection, onSnapshot, getDocs, writeBatch, doc, setDoc, deleteDoc, query, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { TeamMember } from '../types';
+import firebase from 'firebase/compat/app';
 
 // --- SECURE ID / TEAM MEMBER SERVICE (บริการจัดการข้อมูลเจ้าหน้าที่) ---
 
 const SECUREID_COLLECTION = 'secureID'; // ชื่อ Collection ใน Firestore
-const secureIdCollectionRef = collection(db, SECUREID_COLLECTION);
 
 // สร้างข้อมูลเจ้าหน้าที่เริ่มต้น (Admin)
 export const seedInitialTeamMembers = async () => {
-    const snapshot = await getDocs(secureIdCollectionRef);
+    const snapshot = await db.collection(SECUREID_COLLECTION).get();
     if (snapshot.empty) {
-        console.log("Seeding initial secureID user...");
-        const initialUser = {
-            name: 'ไตเติ้ล ณัฐกิตติ์ โชติกรณ์',
-            position: 'นักศึกษา',
-            avatar: 'https://i.pravatar.cc/150?u=TM01',
-            id: 'nattakit', // Username
-            password: "1234" // Password (Plaintext สำหรับโปรเจกต์นี้)
+        console.log("Seeding initial secureID user (admin)...");
+        // สร้าง User เริ่มต้น 1 คน
+        const initialUser: TeamMember = {
+            id: 'TM001',
+            name: 'ผู้ดูแลระบบ (Admin)',
+            position: 'Admin',
+            avatar: 'https://i.pravatar.cc/150?u=TM001',
+            username: 'admin',
         };
-        const docRef = doc(db, SECUREID_COLLECTION, "TM001");
-        await setDoc(docRef, initialUser);
+        
+        // เก็บ Password แยกใน Field (ในระบบจริงควร Hash)
+        await db.collection(SECUREID_COLLECTION).doc(initialUser.id).set({
+            ...initialUser,
+            id: 'admin', // username field for login query
+            password: 'password123' // รหัสผ่านเริ่มต้น
+        });
     }
 };
 
 // ติดตามการเปลี่ยนแปลงข้อมูลเจ้าหน้าที่แบบ Real-time
 export const onTeamMembersUpdate = (callback: (members: TeamMember[]) => void): (() => void) => {
-    const q = query(secureIdCollectionRef);
-    return onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+    return db.collection(SECUREID_COLLECTION).onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
         const members: TeamMember[] = snapshot.docs.map(doc => {
             const data = doc.data() as { name: string, position: string, avatar: string, id: string };
             return {
@@ -46,7 +50,7 @@ export const onTeamMembersUpdate = (callback: (members: TeamMember[]) => void): 
 
 // เพิ่มเจ้าหน้าที่ใหม่
 export const addTeamMember = async (memberData: Omit<TeamMember, 'id' | 'avatar'>): Promise<void> => {
-    const snapshot = await getDocs(secureIdCollectionRef);
+    const snapshot = await db.collection(SECUREID_COLLECTION).get();
     // หา ID ล่าสุดเพื่อรันเลขต่อ (TM001 -> TM002)
     const existingIds = snapshot.docs
         .map(doc => parseInt(doc.id.replace('TM', ''), 10))
@@ -67,14 +71,12 @@ export const addTeamMember = async (memberData: Omit<TeamMember, 'id' | 'avatar'
         password: memberData.password,
     };
 
-    const docRef = doc(db, SECUREID_COLLECTION, newId);
-    await setDoc(docRef, newMember);
+    await db.collection(SECUREID_COLLECTION).doc(newId).set(newMember);
 };
 
 // แก้ไขข้อมูลเจ้าหน้าที่
 export const updateTeamMember = async (member: TeamMember): Promise<void> => {
     try {
-        const docRef = doc(db, SECUREID_COLLECTION, member.id);
         const dataToUpdate: { [key: string]: any } = {
             name: member.name,
             position: member.position,
@@ -87,7 +89,7 @@ export const updateTeamMember = async (member: TeamMember): Promise<void> => {
             dataToUpdate.password = member.password;
         }
 
-        await setDoc(docRef, dataToUpdate, { merge: true });
+        await db.collection(SECUREID_COLLECTION).doc(member.id).set(dataToUpdate, { merge: true });
     } catch (e) {
         console.error("Error updating team member: ", e);
         throw e;
@@ -97,8 +99,7 @@ export const updateTeamMember = async (member: TeamMember): Promise<void> => {
 // ลบเจ้าหน้าที่
 export const deleteTeamMember = async (memberId: string): Promise<void> => {
     try {
-        const docRef = doc(db, SECUREID_COLLECTION, memberId);
-        await deleteDoc(docRef);
+        await db.collection(SECUREID_COLLECTION).doc(memberId).delete();
     } catch (e) {
         console.error("Error deleting team member: ", e);
         throw e;

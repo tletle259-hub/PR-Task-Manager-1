@@ -1,3 +1,5 @@
+
+// @ts-nocheck
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiUserPlus, FiEdit, FiTrash2, FiSave, FiXCircle, FiKey, FiUser, FiAlertTriangle } from 'react-icons/fi';

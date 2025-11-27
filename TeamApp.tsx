@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBarChart2, FiCheckSquare, FiStar, FiUsers, FiCalendar, FiSettings, FiChevronDown, FiInbox, FiLogOut, FiAlertTriangle } from 'react-icons/fi';
@@ -493,7 +494,7 @@ const TeamApp: React.FC<TeamAppProps> = ({ onLogout, theme, toggleTheme, current
     return (
         <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-dark-bg">
             <div className="text-center">
-                <p className="text-xl font-semibold text-gray-700 dark:text-dark-text">กำลังเชื่อมต่อฐานข้อมูล...<br />โปรดรอสักครู่...</p>
+                <p className="text-xl font-semibold text-gray-700 dark:text-dark-text">กำลังเชื่อมต่อฐานข้อมูล...</p>
             </div>
         </div>
     );

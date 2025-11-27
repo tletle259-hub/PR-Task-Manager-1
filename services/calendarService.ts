@@ -1,20 +1,19 @@
 
-import { collection, onSnapshot, writeBatch, doc, getDocs, addDoc, deleteDoc, QuerySnapshot, DocumentData } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { CalendarEvent } from '../types';
 import { MOCK_HOLIDAYS } from '../constants';
+import firebase from 'firebase/compat/app';
 
 // --- CALENDAR SERVICE (บริการปฏิทิน) ---
 
 const EVENTS_COLLECTION = 'calendarEvents';
-const eventsCollectionRef = collection(db, EVENTS_COLLECTION);
 
 // สร้างข้อมูลวันหยุดเริ่มต้นลงในปฏิทิน
 export const seedInitialCalendarEvents = async () => {
-    const snapshot = await getDocs(eventsCollectionRef);
+    const snapshot = await db.collection(EVENTS_COLLECTION).get();
     if (snapshot.empty) {
         console.log("Seeding initial calendar events (holidays)...");
-        const batch = writeBatch(db);
+        const batch = db.batch();
         MOCK_HOLIDAYS.forEach(h => {
             const eventData: CalendarEvent = {
                 id: `holiday-${h.date}`,
@@ -24,7 +23,7 @@ export const seedInitialCalendarEvents = async () => {
                 allDay: true,
                 color: '#10b981' // สีเขียวสำหรับวันหยุด
             };
-            const eventDocRef = doc(db, EVENTS_COLLECTION, eventData.id);
+            const eventDocRef = db.collection(EVENTS_COLLECTION).doc(eventData.id);
             batch.set(eventDocRef, eventData);
         });
         await batch.commit();
@@ -33,7 +32,7 @@ export const seedInitialCalendarEvents = async () => {
 
 // ติดตามกิจกรรมในปฏิทิน
 export const onCalendarEventsUpdate = (callback: (events: CalendarEvent[]) => void): (() => void) => {
-    return onSnapshot(eventsCollectionRef, (snapshot: QuerySnapshot<DocumentData>) => {
+    return db.collection(EVENTS_COLLECTION).onSnapshot((snapshot: firebase.firestore.QuerySnapshot) => {
         const events: CalendarEvent[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CalendarEvent));
         callback(events);
     });
@@ -42,9 +41,9 @@ export const onCalendarEventsUpdate = (callback: (events: CalendarEvent[]) => vo
 // บันทึก/อัปเดตกิจกรรมหลายรายการ
 export const saveCalendarEvents = async (events: CalendarEvent[]): Promise<void> => {
     try {
-        const batch = writeBatch(db);
+        const batch = db.batch();
         events.forEach(event => {
-            const eventDocRef = doc(db, EVENTS_COLLECTION, event.id);
+            const eventDocRef = db.collection(EVENTS_COLLECTION).doc(event.id);
             batch.set(eventDocRef, event, { merge: true }); // Merge = ถ้ามีแล้วอัปเดต ถ้าไม่มีสร้างใหม่
         });
         await batch.commit();
@@ -56,7 +55,7 @@ export const saveCalendarEvents = async (events: CalendarEvent[]): Promise<void>
 // เพิ่มกิจกรรมใหม่
 export const addCalendarEvent = async (newEvent: Omit<CalendarEvent, 'id'>): Promise<void> => {
     try {
-        await addDoc(eventsCollectionRef, newEvent);
+        await db.collection(EVENTS_COLLECTION).add(newEvent);
     } catch (e) {
         console.error("Error adding calendar event: ", e);
     }
@@ -65,8 +64,7 @@ export const addCalendarEvent = async (newEvent: Omit<CalendarEvent, 'id'>): Pro
 // ลบกิจกรรม
 export const deleteCalendarEvent = async (eventId: string): Promise<void> => {
     try {
-        const eventDocRef = doc(db, EVENTS_COLLECTION, eventId);
-        await deleteDoc(eventDocRef);
+        await db.collection(EVENTS_COLLECTION).doc(eventId).delete();
     } catch (e) {
         console.error("Error deleting calendar event: ", e);
     }

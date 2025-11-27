@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiClock, FiCheckSquare, FiSquare, FiCheck } from 'react-icons/fi';
+import { FiSearch, FiStar, FiEdit3, FiTrash2, FiCalendar, FiUser, FiChevronDown, FiX, FiAlertTriangle, FiFilter, FiBriefcase, FiGrid, FiList, FiClock, FiCheckSquare, FiCheck } from 'react-icons/fi';
 import { Task, TeamMember, TaskStatus, TaskTypeConfig } from '../types';
 import { TASK_STATUS_COLORS, MONTH_NAMES_TH } from '../constants';
 import { updateTask, deleteTask, deleteTasks } from '../services/taskService';
@@ -292,7 +292,6 @@ const TaskCard: React.FC<{
     isSelected: boolean;
     onToggleSelect: () => void;
 }> = ({ task, teamMembers, taskTypeConfigs, onSelectTask, onToggleStar, onDelete, isCompact = false, isSelectionMode, isSelected, onToggleSelect }) => {
-    // Handle multiple assignees safely
     const assigneeIds = task.assigneeIds || [];
     const assignees = teamMembers.filter(m => assigneeIds.includes(m.id));
     
@@ -302,6 +301,7 @@ const TaskCard: React.FC<{
 
     const handleClick = (e: React.MouseEvent) => {
         if (isSelectionMode) {
+            e.stopPropagation();
             onToggleSelect();
         } else {
             onSelectTask(task);
@@ -314,7 +314,7 @@ const TaskCard: React.FC<{
             initial={{ opacity: 0, y: 50, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
-            whileHover={!isCompact ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
+            whileHover={!isCompact && !isSelectionMode ? { y: -12, scale: 1.05, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' } : {}}
             transition={{ type: 'spring', stiffness: 300, damping: 15 }}
             className={`bg-white dark:bg-dark-card rounded-xl shadow-lg flex flex-col justify-between overflow-hidden interactive-glow cursor-pointer relative ${isSelected ? 'ring-2 ring-brand-primary dark:ring-dark-accent transform scale-[1.02]' : ''}`}
             style={{ borderTop: `4px solid ${colorHex}` }}
@@ -807,7 +807,7 @@ const TaskDashboard: React.FC<TaskDashboardProps> = ({ tasks, teamMembers, taskT
                         onClick={toggleSelectionMode} 
                         className="icon-interactive flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-white dark:bg-dark-muted border-gray-300 dark:border-dark-border hover:bg-gray-100 dark:hover:bg-dark-border"
                     >
-                        <FiCheckSquare /> เลือกหลายรายการ
+                        <FiCheckSquare /> จัดการหลายรายการ
                     </button>
                 )}
 
