@@ -1,4 +1,3 @@
-
 // @ts-nocheck
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -244,7 +243,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
         let maxId = 0;
         
         // Regex matches PR numbers for the CURRENT YEAR.
-        // Supports both "PRxxx-YYYY" (new) and "PRxxx/YYYY" (legacy display) if saved that way.
+        // Supports parsing both PRxxx-YYYY (new) and PRxxx/YYYY (legacy display) formats to find max sequence.
         const idPattern = /^PR(\d+)[\/-](\d{4})$/i;
 
         tasks.forEach(t => {
@@ -276,7 +275,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             notes: [],
             attachments: fileData,
             requestType: formData.requestType,
-            additionalNotes: formData.additionalNotes,
+            additionalNotes: formData.additionalNotes || null,
         };
 
         if (formData.requestType === 'project') {
@@ -292,7 +291,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
                     taskTitle: sub.taskTitle,
                     taskDescription: sub.taskDescription,
                     taskType: sub.taskType === OTHER_TASK_TYPE_NAME ? sub.taskType : sub.taskType,
-                    otherTaskTypeName: sub.taskType === OTHER_TASK_TYPE_NAME ? sub.otherTaskTypeName : undefined,
+                    otherTaskTypeName: sub.taskType === OTHER_TASK_TYPE_NAME ? sub.otherTaskTypeName : null,
                     dueDate: sub.dueDate,
                     projectId,
                     projectName: projectName
@@ -306,7 +305,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
                 taskTitle: formData.taskTitle,
                 taskDescription: formData.taskDescription,
                 taskType: formData.taskType === OTHER_TASK_TYPE_NAME ? formData.taskType : formData.taskType,
-                otherTaskTypeName: formData.taskType === OTHER_TASK_TYPE_NAME ? formData.otherTaskTypeName : undefined,
+                otherTaskTypeName: formData.taskType === OTHER_TASK_TYPE_NAME ? formData.otherTaskTypeName : null,
                 dueDate: formData.dueDate,
             }];
         }

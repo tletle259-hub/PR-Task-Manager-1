@@ -105,7 +105,7 @@ const UserManualModal: React.FC<UserManualModalProps> = ({ isOpen, onClose, role
 
               <Section title="4. การติดต่อสื่อสาร" icon={<FiGlobe />}>
                 <ul className="list-disc pl-5 space-y-2">
-                  <li><strong>Chatbot / ติดต่อเจ้าหน้าที่:</strong> ปุ่มวงกลมขวาล่าง สามารถใช้ส่งข้อความถึงเจ้าหน้าที่ดูแลระบบได้โดยตรง</li>
+                  <li><strong>ติดต่อเจ้าหน้าที่:</strong> ปุ่มวงกลมขวาล่าง สามารถใช้ส่งข้อความถึงเจ้าหน้าที่ดูแลระบบได้โดยตรง</li>
                   <li><strong>หมายเหตุในงาน:</strong> ในแบบฟอร์มสั่งงาน ท่านสามารถระบุหมายเหตุเพิ่มเติม หรือลิงก์ไฟล์แนบขนาดใหญ่ได้</li>
                 </ul>
               </Section>
