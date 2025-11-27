@@ -417,12 +417,13 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                      <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                         {editedTask.notes.length === 0 && <p className="text-sm text-gray-400 italic">ยังไม่มีบันทึก</p>}
                         {editedTask.notes.map(note => (
+                            note ? (
                             <div key={note.id} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-900/30 text-sm relative group">
                                 <div className="flex justify-between items-start mb-1">
                                     <span className="font-bold text-gray-700 dark:text-gray-300">{note.author}</span>
                                     <span className="text-xs text-gray-500">{new Date(note.timestamp).toLocaleString('th-TH')}</span>
                                 </div>
-                                {editingNote?.id === note.id ? (
+                                {editingNote && editingNote.id === note.id ? (
                                     <div className="mt-2">
                                         <textarea 
                                             value={editingNote.text} 
@@ -444,6 +445,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ task, teamMembers, onClose, onSav
                                     <button onClick={() => handleDeleteNote(note.id)} className="p-1 text-red-500 hover:text-red-700" title="ลบ"><FiTrash2 size={12}/></button>
                                 </div>
                             </div>
+                            ) : null
                         ))}
                      </div>
 

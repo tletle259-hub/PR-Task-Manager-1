@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { FiUser, FiLock, FiSave, FiInfo, FiMail, FiBriefcase, FiEye, FiEyeOff } from 'react-icons/fi';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiUser, FiLock, FiSave, FiInfo, FiMail, FiBriefcase, FiEye, FiEyeOff, FiHelpCircle } from 'react-icons/fi';
 import { RequesterProfile } from '../App';
 import { User, Department } from '../types';
 import { updateUser, getUserByMsalAccountId } from '../services/userService';
 import { loginWithMicrosoft, ensureFirebaseAuth } from '../services/authService';
 import { onDepartmentsUpdate } from '../services/departmentService';
 import SearchableDropdown from './SearchableDropdown';
+import UserManualModal from './UserManualModal';
 
 
 interface RequesterSettingsProps {
@@ -26,6 +27,7 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
     const [showPassword, setShowPassword] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
     const [departments, setDepartments] = useState<string[]>([]);
+    const [showManual, setShowManual] = useState(false);
 
     // โหลดข้อมูลเดิม
     useEffect(() => {
@@ -176,7 +178,15 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
 
     return (
         <div className="max-w-2xl mx-auto space-y-8">
-            <h2 className="text-3xl font-bold">ตั้งค่าบัญชี</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-3xl font-bold">ตั้งค่าบัญชี</h2>
+                <button 
+                    onClick={() => setShowManual(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 rounded-lg font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                >
+                    <FiHelpCircle /> คู่มือการใช้งาน
+                </button>
+            </div>
 
             {message && (
                 <motion.div
@@ -262,6 +272,12 @@ const RequesterSettings: React.FC<RequesterSettingsProps> = ({ user, onProfileUp
                     </div>
                 )}
             </motion.div>
+            
+            <AnimatePresence>
+                {showManual && (
+                    <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} role="requester" />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

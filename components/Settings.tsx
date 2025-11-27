@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle, FiTag, FiClock, FiList, FiUpload, FiDatabase } from 'react-icons/fi';
+import { FiEye, FiInfo, FiSun, FiMoon, FiBell, FiAlertTriangle, FiCheckSquare, FiBookOpen, FiPlus, FiEdit, FiTrash2, FiSave, FiXCircle, FiTag, FiClock, FiList, FiUpload, FiDatabase, FiHelpCircle } from 'react-icons/fi';
 import { Department, TaskTypeConfig } from '../types';
 import { onDepartmentsUpdate, addDepartment, updateDepartment, deleteDepartment, onTaskTypeConfigsUpdate, addTaskTypeConfig, updateTaskTypeConfig, deleteTaskTypeConfig } from '../services/departmentService';
 import { importTasksFromJSON } from '../services/taskService';
+import UserManualModal from './UserManualModal';
 
 
 // --- COMPONENT: CONFIRMATION MODAL ---
@@ -398,6 +399,7 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
   });
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showManual, setShowManual] = useState(false);
 
   const handleSoundToggle = () => {
     const newValue = !soundEnabled;
@@ -419,7 +421,15 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
         <style>{`.form-input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; background-color: #f9fafb; } .dark .form-input { border-color: #4b5563; background-color: #374151; }`}</style>
-        <h2 className="text-3xl font-bold">ตั้งค่า</h2>
+        <div className="flex justify-between items-center">
+            <h2 className="text-3xl font-bold">ตั้งค่า</h2>
+            <button 
+                onClick={() => setShowManual(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 rounded-lg font-semibold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            >
+                <FiHelpCircle /> คู่มือการใช้งาน
+            </button>
+        </div>
         
         <SettingsSection icon={<FiEye size={24} />} title="ลักษณะที่ปรากฏและการแจ้งเตือน">
             <div className="flex justify-between items-center p-4 border border-gray-200 dark:border-dark-border rounded-lg">
@@ -516,6 +526,12 @@ const Settings: React.FC<SettingsProps> = ({ theme, toggleTheme }) => {
                     confirmText="ยืนยัน"
                     cancelText="ยกเลิก"
                 />
+            )}
+        </AnimatePresence>
+        
+        <AnimatePresence>
+            {showManual && (
+                <UserManualModal isOpen={showManual} onClose={() => setShowManual(false)} role="team" />
             )}
         </AnimatePresence>
     </div>
