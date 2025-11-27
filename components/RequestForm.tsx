@@ -199,8 +199,24 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
 
   const handleFileChange = (files: FileList | null) => {
     if (files) {
-      const newFiles = Array.from(files).filter(file => file.size <= 100 * 1024 * 1024);
-      setAttachments(prev => [...prev, ...newFiles]);
+      // Limit file size to 30MB (30 * 1024 * 1024 bytes)
+      const MAX_SIZE = 30 * 1024 * 1024; 
+      const validFiles: File[] = [];
+      let hasOversizedFile = false;
+
+      Array.from(files).forEach(file => {
+          if (file.size <= MAX_SIZE) {
+              validFiles.push(file);
+          } else {
+              hasOversizedFile = true;
+          }
+      });
+
+      if (hasOversizedFile) {
+          alert("บางไฟล์มีขนาดเกิน 30MB และจะไม่ถูกอัปโหลด");
+      }
+
+      setAttachments(prev => [...prev, ...validFiles]);
     }
   };
 
@@ -243,16 +259,14 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
         let maxId = 0;
         
         // Regex matches PR numbers for the CURRENT YEAR.
-        // Supports parsing both PRxxx-YYYY (new) and PRxxx/YYYY (legacy display) formats to find max sequence.
-        const idPattern = /^PR(\d+)[\/-](\d{4})$/i;
+        // Supports both "PRxxx-YYYY" (new) and "PRxxx/YYYY" (legacy display) if saved that way.
+        const idPattern = new RegExp(`^PR(\\d+)[\\/-]${currentYear}$`, 'i');
 
         tasks.forEach(t => {
             const match = t.id.match(idPattern);
             if (match) {
                 const num = parseInt(match[1], 10);
-                const year = parseInt(match[2], 10);
-                // Only consider IDs from the current year
-                if (year === currentYear && !isNaN(num) && num > maxId) {
+                if (!isNaN(num) && num > maxId) {
                     maxId = num;
                 }
             }
@@ -275,7 +289,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             notes: [],
             attachments: fileData,
             requestType: formData.requestType,
-            additionalNotes: formData.additionalNotes || null,
+            additionalNotes: formData.additionalNotes || null, // Convert undefined to null
         };
 
         if (formData.requestType === 'project') {
@@ -291,6 +305,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
                     taskTitle: sub.taskTitle,
                     taskDescription: sub.taskDescription,
                     taskType: sub.taskType === OTHER_TASK_TYPE_NAME ? sub.taskType : sub.taskType,
+                    // Convert undefined to null for Firestore compatibility
                     otherTaskTypeName: sub.taskType === OTHER_TASK_TYPE_NAME ? sub.otherTaskTypeName : null,
                     dueDate: sub.dueDate,
                     projectId,
@@ -305,6 +320,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
                 taskTitle: formData.taskTitle,
                 taskDescription: formData.taskDescription,
                 taskType: formData.taskType === OTHER_TASK_TYPE_NAME ? formData.taskType : formData.taskType,
+                // Convert undefined to null for Firestore compatibility
                 otherTaskTypeName: formData.taskType === OTHER_TASK_TYPE_NAME ? formData.otherTaskTypeName : null,
                 dueDate: formData.dueDate,
             }];
@@ -341,7 +357,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
       <div className="bg-brand-primary p-6 text-white flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">แบบฟอร์มสั่งงานและแก้ไขงาน</h2>
+          <h2 className="text-2xl font-bold">แบบฟอร์มขอความอนุเคราะห์</h2>
           <p className="text-blue-100 text-sm mt-1">ส่วนงานสื่อสารองค์กร สภาวิชาชีพบัญชีฯ</p>
         </div>
         <div className="text-right hidden sm:block">
@@ -534,7 +550,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
             >
                 <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">ลากและวางไฟล์ที่นี่ หรือ <label className="text-brand-primary cursor-pointer hover:underline"><input type="file" multiple onChange={(e) => handleFileChange(e.target.files)} className="hidden" />คลิกเพื่อเลือกไฟล์</label></p>
-                <p className="text-xs text-gray-500 mt-1">รองรับไฟล์ภาพและเอกสาร (สูงสุด 100MB)</p>
+                <p className="text-xs text-gray-500 mt-1">รองรับไฟล์ภาพและเอกสาร (สูงสุด 30MB)</p>
             </div>
             {attachments.length > 0 && (
                 <ul className="mt-4 space-y-2">
