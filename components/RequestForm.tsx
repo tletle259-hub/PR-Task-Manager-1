@@ -341,7 +341,7 @@ const RequestForm: React.FC<RequestFormProps> = ({ onTaskAdded, tasks, user, tas
     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
       <div className="bg-brand-primary p-6 text-white flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">แบบฟอร์มขอความอนุเคราะห์</h2>
+          <h2 className="text-2xl font-bold">แบบฟอร์มสั่งงานและแก้ไขงาน</h2>
           <p className="text-blue-100 text-sm mt-1">ส่วนงานสื่อสารองค์กร สภาวิชาชีพบัญชีฯ</p>
         </div>
         <div className="text-right hidden sm:block">
