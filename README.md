@@ -5,7 +5,7 @@
 ## Run Locally
 **© 2025 PR Task Manager
 Dev by Nattakit Chotikorn**
-**Prerequisites:**  Node.js
+*Prerequisites:*  Node.js
 
 
 1. Install dependencies:
